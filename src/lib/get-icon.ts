@@ -1,5 +1,5 @@
 import { BANK_MAP, type BankSvgComponent } from "./bank-icon-registry";
-export { getMerchantAsset } from "./merchant-icon-registry";
+// export { getMerchantAsset } from "./merchant-icon-registry"; // v2: merchants disabled
 export type { BankSvgComponent };
 
 // ─── Bank lookup ────────────────────────────────────────────────────────────

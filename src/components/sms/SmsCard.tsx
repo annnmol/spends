@@ -117,11 +117,13 @@ function SmsCardBase({ item, accountName }: Props) {
         {body}
       </AppText>
 
+      {/* v2: merchant display disabled
       {merchant && (
         <AppText variant="caption" style={styles.merchant}>
           @ {merchant}
         </AppText>
       )}
+      */}
     </Pressable>
   );
 }

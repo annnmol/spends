@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 import { addSmsReceivedListener } from "../../../modules/sms-module";
 import { useAccountsStore } from "../slices/accounts";
-import { useMerchantsStore } from "../slices/merchants";
+// import { useMerchantsStore } from "../slices/merchants"; // v2: merchants disabled
 import { useSmsStore } from "../slices/sms";
 
 /**
@@ -18,10 +18,9 @@ import { useSmsStore } from "../slices/sms";
 export function SmsListenerBridge() {
   const listening = useSmsStore((s) => s.listening);
 
-  // Boot: accounts → merchants → sms (each depends on previous for matching)
+  // Boot: accounts → sms (merchants disabled in v2)
   useEffect(() => {
     useAccountsStore.getState().init()
-      .then(() => useMerchantsStore.getState().init())
       .then(() => useSmsStore.getState().init());
   }, []);
 

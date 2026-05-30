@@ -2,7 +2,9 @@ import { memo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 
-import { getMerchantAsset, getInitialAndColor } from "@mobile/lib/get-icon";
+// import { getMerchantAsset, getInitialAndColor } from "@mobile/lib/get-icon"; // v2: merchants disabled
+import { getInitialAndColor } from "@mobile/lib/get-icon";
+const getMerchantAsset = (_name?: string | null, _slugs?: string[]) => null;
 
 type Props = {
   name: string | null | undefined;

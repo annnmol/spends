@@ -2,7 +2,7 @@ import { memo } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 import BankIcon from "@mobile/components/ui/bank-icon";
-import MerchantIcon from "@mobile/components/ui/merchant-icon";
+// import MerchantIcon from "@mobile/components/ui/merchant-icon"; // v2: merchants disabled
 import AppText from "@mobile/components/ui/text";
 import { useTheme } from "@mobile/lib/theme";
 import type { Transaction } from "@mobile/lib/transactions";
@@ -106,13 +106,7 @@ function CalendarDayCell({
                 slugs={account.slugs}
                 size={iconSize}
               />
-            ) : (
-              <MerchantIcon
-                key={txn.id}
-                name={txn.merchant ?? txn.sender ?? null}
-                size={iconSize}
-              />
-            );
+            ) : null; // v2: MerchantIcon disabled
           })}
           {/* {overflowCount > 0 && (
             <View style={[styles.badge, { backgroundColor: theme.accent }]}>

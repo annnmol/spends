@@ -26,12 +26,8 @@ const TAB_CONFIG: TabConfig[] = [
     icon: "card",
     iconOutline: "card-outline",
   },
-  {
-    name: "merchants",
-    title: "Merchants",
-    icon: "storefront",
-    iconOutline: "storefront-outline",
-  },
+  // v2: merchants tab disabled
+  // { name: "merchants", title: "Merchants", icon: "storefront", iconOutline: "storefront-outline" },
   {
     name: "calendar",
     title: "Calendar",
@@ -88,6 +84,8 @@ export default function TabsLayout() {
           }}
         />
       ))}
+      {/* v2: hide merchants route from tab bar */}
+      <Tabs.Screen name="merchants" options={{ href: null }} />
     </Tabs>
   );
 }

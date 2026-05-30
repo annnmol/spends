@@ -2,7 +2,7 @@ import type { SmsMessage } from "../../modules/sms-module";
 import type { Account } from "./accounts";
 import { getDb } from "./db";
 import { matchAccount } from "./matchAccount";
-import { matchMerchant, type Merchant } from "./merchants";
+// import { matchMerchant, type Merchant } from "./merchants"; // v2: merchants disabled
 import { parseTransactionSms } from "./parseTransactionSms";
 
 export type Transaction = {
@@ -37,7 +37,7 @@ export async function saveTransaction(
   msg: SmsMessage,
   smsId: string | null,
   accounts: Account[] = [],
-  merchants: Merchant[] = [],
+  // merchants: Merchant[] = [], // v2: merchants disabled
 ): Promise<void> {
   const parsed = parseTransactionSms(msg.body, msg.sender);
   if (parsed.sourceType === "OTP" || parsed.sourceType === "SYSTEM") return;
@@ -72,12 +72,13 @@ export async function saveTransaction(
         await db.runAsync("UPDATE transactions SET account_id = ? WHERE id = ?", linkedAccountId, result.lastInsertRowId);
       }
     }
-    if (merchants.length > 0 && linkedAccountId !== null) {
-      const merchantId = matchMerchant(merchants, msg.body);
-      if (merchantId !== null) {
-        await db.runAsync("UPDATE transactions SET merchant_id = ? WHERE id = ?", merchantId, result.lastInsertRowId);
-      }
-    }
+    // v2: merchant matching disabled
+    // if (merchants.length > 0 && linkedAccountId !== null) {
+    //   const merchantId = matchMerchant(merchants, msg.body);
+    //   if (merchantId !== null) {
+    //     await db.runAsync("UPDATE transactions SET merchant_id = ? WHERE id = ?", merchantId, result.lastInsertRowId);
+    //   }
+    // }
   }
 }
 
@@ -108,10 +109,10 @@ export async function saveTransactions(
   msgs: SmsMessage[],
   useInboxId: boolean,
   accounts: Account[] = [],
-  merchants: Merchant[] = [],
+  // merchants: Merchant[] = [], // v2: merchants disabled
 ): Promise<void> {
   await Promise.all(
-    msgs.map((msg) => saveTransaction(msg, useInboxId ? msg.id : null, accounts, merchants)),
+    msgs.map((msg) => saveTransaction(msg, useInboxId ? msg.id : null, accounts)),
   );
 }
 
