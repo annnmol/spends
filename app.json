@@ -42,7 +42,9 @@
       ],
       "expo-sqlite",
       "expo-secure-store",
-      "expo-image"
+      "expo-image",
+      "expo-build-properties",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -17,7 +17,7 @@ import { useAccountsStore } from "@mobile/store/slices/accounts";
 import { useSmsStore } from "@mobile/store/slices/sms";
 
 const GRID_H_PAD = 32; // 16px left + 16px right
-const CELL_GAP = 4;    // gap between 7 cells (6 gaps total)
+const CELL_GAP = 4; // gap between 7 cells (6 gaps total)
 
 export default function CalendarScreen() {
   const { theme } = useTheme();
@@ -55,27 +55,27 @@ export default function CalendarScreen() {
   // Descending order for the list — useMemo avoids the .reverse() mutation bug
   // (Array.reverse() is in-place; calling it directly on a memo value corrupts
   // the cached reference used by CalendarGrid's byDay map).
-  const monthTxnsDesc = useMemo(
-    () => [...monthTxns].reverse(),
-    [monthTxns],
-  );
+  const monthTxnsDesc = useMemo(() => [...monthTxns].reverse(), [monthTxns]);
 
   const cellSize = Math.floor((width - GRID_H_PAD - CELL_GAP * 6) / 7);
 
   const handlePrev = useCallback(() => {
     setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
     setSelectedDate(null);
+    // showHaptics();
   }, []);
 
   const handleNext = useCallback(() => {
     setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
     setSelectedDate(null);
+    // showHaptics();
   }, []);
 
   const handleSelectDay = useCallback((date: Date) => {
     setSelectedDate((prev) =>
       prev?.getTime() === date.getTime() ? null : date,
     );
+    // showHaptics();
   }, []);
 
   return (
