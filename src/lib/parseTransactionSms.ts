@@ -1,7 +1,17 @@
 export type SmsCategory = "financial" | "otp" | "promotional" | "unknown";
 
+export type TransactionType =
+  | "debit"
+  | "credit"
+  | "refund"
+  | "statement"
+  | "payment"
+  | "otp"
+  | "unknown";
+
 export type ParsedTransactionSms = {
   category: SmsCategory;
+  transactionType: TransactionType;
   amount?: number;
   merchant?: string;
   cardLast4?: string;
@@ -78,6 +88,25 @@ const UPI_REF_RE = /\b(?:upi\s*ref\.?\s*(?:no\.?)?|ref\.?\s*no\.?|txn\s*id)\s*[:
 
 const PROMOTIONAL_KEYWORDS_RE = /\b(?:offer|discount|sale|cashback|win|won|congratulations|congrats|voucher|coupon|promo|deal|off on|flat\s+\d+%|click here|subscribe|unsubscribe|opt[\s-]?out|download now|install now|limited time|hurry|expires)\b/i;
 
+// ─── Transaction type patterns (checked in priority order) ───────────────────
+// REFUND before CREDIT — "refund credited" must be REFUND not CREDIT
+const REFUND_TYPE_RE = /\b(?:refund(?:ed)?|reversal|reversed|returned\s+to\s+(?:your|the)\s+(?:account|card|wallet))\b/i;
+const STATEMENT_TYPE_RE = /\b(?:statement\s+(?:for|generated|is\s+ready)|minimum\s+(?:amount\s+)?due|total\s+(?:amount\s+)?due|outstanding\s+(?:amount|balance)|bill\s+(?:generated|for\s+the\s+month))\b/i;
+const PAYMENT_TYPE_RE = /\b(?:payment\s+(?:received|credited|successful|accepted)|emi\s+(?:received|paid\s+successfully))\b/i;
+const DEBIT_TYPE_RE = /\b(?:debited|spent|withdrawn|deducted|charged|mandate\s+(?:executed|deducted|registered)|auto[\s-]?debit|emi\s+of\b)\b/i;
+const CREDIT_TYPE_RE = /\b(?:credited|salary|deposit(?:ed)?|cash\s+(?:back|deposit)|added\s+to\s+(?:your|the)\s+(?:account|wallet))\b/i;
+
+function classifyTransactionType(body: string, category: SmsCategory): TransactionType {
+  if (category === "otp") return "otp";
+  if (category !== "financial") return "unknown";
+  if (REFUND_TYPE_RE.test(body)) return "refund";
+  if (STATEMENT_TYPE_RE.test(body)) return "statement";
+  if (PAYMENT_TYPE_RE.test(body)) return "payment";
+  if (DEBIT_TYPE_RE.test(body)) return "debit";
+  if (CREDIT_TYPE_RE.test(body)) return "credit";
+  return "unknown";
+}
+
 // ─── Classifier ───────────────────────────────────────────────────────────────
 
 function classifyCategory(sender: string, body: string): SmsCategory {
@@ -105,7 +134,8 @@ export function parseTransactionSms(
   sender = ""
 ): ParsedTransactionSms {
   const category = classifyCategory(sender, message);
-  const result: ParsedTransactionSms = { category };
+  const transactionType = classifyTransactionType(message, category);
+  const result: ParsedTransactionSms = { category, transactionType };
 
   if (!message) return result;
 

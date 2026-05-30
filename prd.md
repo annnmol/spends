@@ -163,7 +163,7 @@ Success Criteria:
 
 Status: Pending
 
-Step 6.5 - Deduplication Layer
+## Step 6.5 - Deduplication Layer
 
 Store Android SMS ID.
 
@@ -191,6 +191,68 @@ User can press:
 - Startup Sync
 
 100 times and database count remains correct.
+
+## Step 6.6 - Financial Transaction Classification
+
+Goal:
+Classify every financial SMS.
+
+Types:
+
+- DEBIT
+- CREDIT
+- REFUND
+- STATEMENT
+- PAYMENT
+- OTP
+- UNKNOWN
+
+Rules:
+Use sender patterns and message keywords.
+
+Examples:
+
+"spent", "debited" -> DEBIT
+
+"credited" -> CREDIT
+
+"refunded" -> REFUND
+
+"statement generated" -> STATEMENT
+
+"payment received" -> PAYMENT
+
+OTP messages should never create transactions.
+
+I would start with simple keyword rules:
+
+spent
+debited
+withdrawn
+→ DEBIT
+
+credited
+salary
+deposit
+→ CREDIT
+
+refund
+reversed
+returned
+→ REFUND
+
+statement
+minimum due
+total due
+→ STATEMENT
+
+payment received
+payment credited
+→ PAYMENT
+
+otp
+one time password
+→ OTP
 
 ---
 

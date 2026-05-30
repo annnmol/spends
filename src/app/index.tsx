@@ -14,6 +14,12 @@ import PermissionStatus, {
 import SmsCard from "@mobile/components/sms/SmsCard";
 import AppButton from "@mobile/components/ui/button";
 import AppText from "@mobile/components/ui/text";
+import {
+  clearAllTransactions,
+  loadTransactions,
+  saveTransaction,
+  saveTransactions,
+} from "@mobile/lib/saveTransaction";
 import SmsModule, {
   addSmsReceivedListener,
   type SmsMessage,
@@ -38,10 +44,23 @@ export default function HomeScreen() {
 
   useEffect(() => {
     SmsModule.getSmsPermissionStatus()
-      .then((res) => setPermission(toState(res.status)))
+      .then((res) => {
+        const state = toState(res.status);
+        setPermission(state);
+        if (state === "granted") {
+          SmsModule.startListening()
+            .then(() => setListening(true))
+            .catch(() => {});
+        }
+      })
       .catch((e: unknown) =>
         setError(e instanceof Error ? e.message : String(e)),
       );
+    loadTransactions()
+      .then((saved) => {
+        if (saved.length > 0) setMessages(saved);
+      })
+      .catch(() => {});
   }, []);
 
   // Subscribe to live SMS events while listening is active
@@ -49,6 +68,7 @@ export default function HomeScreen() {
     if (!listening) return;
     const sub = addSmsReceivedListener((msg) => {
       setMessages((prev) => [msg, ...prev]);
+      saveTransaction(msg, null).catch(() => {});
     });
     return () => sub.remove();
   }, [listening]);
@@ -70,6 +90,7 @@ export default function HomeScreen() {
     try {
       const list = await SmsModule.getRecentSms(50);
       setMessages(list);
+      saveTransactions(list, true).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -83,6 +104,7 @@ export default function HomeScreen() {
     try {
       const list = await SmsModule.getAllSms();
       setMessages(list);
+      saveTransactions(list, true).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -96,6 +118,7 @@ export default function HomeScreen() {
     try {
       const list = await SmsModule.getSmsAfterDate(SINCE_TIMESTAMP);
       setMessages(list);
+      saveTransactions(list, true).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -188,12 +211,31 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const onClearDb = useCallback(async () => {
+    setError(null);
+    try {
+      await clearAllTransactions();
+      setMessages([]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+
   const canRead = permission === "granted";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <AppText variant="title">SMS Reader Native Demo</AppText>
+        <View style={styles.headerRow}>
+          <AppText variant="title">SMS Reader Native Demo</AppText>
+          <AppButton
+            onPress={onClearDb}
+            variant="outline"
+            style={styles.clearDbBtn}
+          >
+            Clear DB
+          </AppButton>
+        </View>
         <PermissionStatus state={permission} />
         {messages.length > 0 && (
           <AppText variant="caption" style={styles.countText}>
@@ -244,7 +286,8 @@ export default function HomeScreen() {
         </AppButton>
 
         <AppText variant="caption" style={styles.sectionLabel}>
-          Background Queue{pendingCount !== null ? `  •  ${pendingCount} pending` : ""}
+          Background Queue
+          {pendingCount !== null ? `  •  ${pendingCount} pending` : ""}
         </AppText>
         <AppButton onPress={onCheckQueue} variant="outline">
           Check Queue
@@ -290,6 +333,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f9fafb" },
   header: { padding: 16, gap: 8 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  clearDbBtn: { paddingHorizontal: 10, paddingVertical: 4 },
   actions: { maxHeight: 260, paddingHorizontal: 16 },
   actionsInner: { gap: 8 },
   errorBox: {
