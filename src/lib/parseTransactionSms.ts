@@ -1,15 +1,112 @@
+export type SmsCategory = "financial" | "otp" | "promotional" | "unknown";
+
 export type ParsedTransactionSms = {
+  category: SmsCategory;
   amount?: number;
   merchant?: string;
   cardLast4?: string;
+  upiRef?: string;
 };
 
-const AMOUNT_RE = /(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]{1,2})?)/i;
-const CARD_RE = /\b(?:card|a\/c|acct|account)[^\d]*([x\*]{2,}|ending)?[\s\-]*(\d{4})\b/i;
-const MERCHANT_RE = /\s(?:at|to|on)\s+([A-Z0-9][A-Za-z0-9&'.\- ]{1,40}?)(?:\s+(?:on|via|using|ref|txn|upi|dated|info|bal|avl)\b|[.,;]|$)/i;
+// ─── Sender classification ────────────────────────────────────────────────────
 
-export function parseTransactionSms(message: string): ParsedTransactionSms {
-  const result: ParsedTransactionSms = {};
+// Indian bank / fintech 6-char alphanumeric sender IDs (case-insensitive).
+// Format arriving in ADDRESS field: "VM-HDFCBK", "AD-ICICIB", "JD-PAYTM", etc.
+const BANK_SENDER_IDS = new Set([
+  // Major private banks
+  "HDFCBK", "HDFCBN", "HDFCBANKCC",
+  "ICICIB", "ICICIT", "ICICIC",
+  "AXISBK", "AXISBN", "AXISCC",
+  "KOTAKB", "KOTAK",
+  "YESBK",  "YESBNK",
+  "INDUSB", "INDBNK",
+  "IDFCFB", "IDFCBN",
+  "RBLBNK", "RBLBKR",
+  "FEDBK",  "FDRLBN",
+  "AUBANK", "AUBKCC",
+  // PSU banks
+  "SBIINB", "SBIPSG", "SBICRD", "SBIUPI",
+  "PNBSMS", "PNBUPI",
+  "BOISBY", "BOIUPI",
+  "CNRBNK", "CANABN",
+  "UNIONB", "UBIONB",
+  "CENTBK",
+  "SYNBNK",
+  "IOBANK",
+  "IDBI",
+  // Payment platforms / wallets
+  "PHONEPE", "PPESMS", "PHPEBN",
+  "PAYTM",  "PYTMBN", "PYTMSM",
+  "GPAY",   "GOOGPY",
+  "AMZNPY", "AMZPAY",
+  "BHIM",   "BHIMUPI",
+  "FREECHARGE", "FREECH",
+  "MOBIKWIK",
+  "AIRPAY",
+  // Credit cards / NBFC / fintech
+  "AMEXIN", "AMEXCC",
+  "CITIBN", "CITICC",
+  "HSBCIN",
+  "BAJAFIN", "BAJAJ",
+  "LENDNGK", "NIRAFC",
+]);
+
+function extractSenderId(address: string): string {
+  // "VM-HDFCBK" → "HDFCBK"  |  "AD-PAYTM" → "PAYTM"  |  "+919876543210" → ""
+  const match = address.match(/^[A-Z]{2}-([A-Z0-9]+)$/i);
+  return match ? match[1].toUpperCase() : "";
+}
+
+function isBankSender(address: string): boolean {
+  const id = extractSenderId(address);
+  if (!id) return false;
+  if (BANK_SENDER_IDS.has(id)) return true;
+  // Loose match: any sender ID containing a known bank keyword
+  return /HDFC|ICICI|AXIS|KOTAK|SBI|PNB|BOI|CANARA|UNION|INDUS|IDFC|RBL|PAYTM|PHONEPE|GPAY/i.test(id);
+}
+
+// ─── Body patterns ────────────────────────────────────────────────────────────
+
+const OTP_RE = /\b(?:otp|one[\s-]?time[\s-]?(?:password|passcode)|verification[\s-]?code|is your[\s-]?(?:otp|code|password))\b/i;
+const OTP_CODE_RE = /\b(?:otp|code|password)\s*(?:is|:)?\s*([0-9]{4,8})\b/i;
+
+const FINANCIAL_KEYWORDS_RE = /\b(?:debited|credited|debit|credit|spent|payment|paid|transfer(?:red)?|transaction|txn|withdrawn|deposit(?:ed)?|mandate|emi|autopay|cashback|refund(?:ed)?)\b/i;
+const AMOUNT_RE = /(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]{1,2})?)/i;
+const CARD_RE = /\b(?:card|a\/c|acct|account)[^\d]*(?:[x*]{2,})?[\s-]*(\d{4})\b/i;
+const MERCHANT_RE = /\s(?:at|to|on)\s+([A-Z0-9][A-Za-z0-9&'.\- ]{1,40}?)(?:\s+(?:on|via|using|ref|txn|upi|dated|info|bal|avl)\b|[.,;]|$)/i;
+const UPI_REF_RE = /\b(?:upi\s*ref\.?\s*(?:no\.?)?|ref\.?\s*no\.?|txn\s*id)\s*[:\-]?\s*([0-9]{6,20})\b/i;
+
+const PROMOTIONAL_KEYWORDS_RE = /\b(?:offer|discount|sale|cashback|win|won|congratulations|congrats|voucher|coupon|promo|deal|off on|flat\s+\d+%|click here|subscribe|unsubscribe|opt[\s-]?out|download now|install now|limited time|hurry|expires)\b/i;
+
+// ─── Classifier ───────────────────────────────────────────────────────────────
+
+function classifyCategory(sender: string, body: string): SmsCategory {
+  if (OTP_RE.test(body)) return "otp";
+
+  const fromBank = isBankSender(sender);
+
+  if (fromBank && FINANCIAL_KEYWORDS_RE.test(body)) return "financial";
+  if (fromBank && AMOUNT_RE.test(body)) return "financial";
+
+  if (FINANCIAL_KEYWORDS_RE.test(body) && AMOUNT_RE.test(body)) return "financial";
+
+  if (PROMOTIONAL_KEYWORDS_RE.test(body)) return "promotional";
+
+  // Numeric-only senders (e.g. "+919876543210") sending OTP-like 4-8 digit codes
+  if (/^\+?[0-9]{10,13}$/.test(sender) && OTP_CODE_RE.test(body)) return "otp";
+
+  return "unknown";
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+export function parseTransactionSms(
+  message: string,
+  sender = ""
+): ParsedTransactionSms {
+  const category = classifyCategory(sender, message);
+  const result: ParsedTransactionSms = { category };
+
   if (!message) return result;
 
   const amountMatch = message.match(AMOUNT_RE);
@@ -19,10 +116,13 @@ export function parseTransactionSms(message: string): ParsedTransactionSms {
   }
 
   const cardMatch = message.match(CARD_RE);
-  if (cardMatch) result.cardLast4 = cardMatch[2];
+  if (cardMatch) result.cardLast4 = cardMatch[1];
 
   const merchantMatch = message.match(MERCHANT_RE);
   if (merchantMatch) result.merchant = merchantMatch[1].trim();
+
+  const upiMatch = message.match(UPI_REF_RE);
+  if (upiMatch) result.upiRef = upiMatch[1];
 
   return result;
 }

@@ -1,497 +1,367 @@
-# Product Requirements Document
+# SMS Finance Tracker - Development Roadmap
 
-## Product
+## Current Progress
 
-A native-style password manager app built with React Native and Expo, designed to start fast in Expo Go, keep the initial release simple, and introduce native Android autofill only after the core product is stable.
+### ✅ Step 1: Native SMS Reading
 
-## Vision
+Completed.
 
-Build a secure, local-first password manager with modern password storage, password generation, TOTP support, and encrypted backup/restore. Keep the MVP lightweight, fast to iterate, and free for users. Add Android autofill later as a native enhancement once the core experience is proven.
+Built a custom Kotlin Expo Module with:
 
-## Goals
+- `getRecentSms(limit)`
+- `getAllSms()`
+- `getSmsAfterDate(timestamp)`
 
-- Deliver a polished password manager UI quickly using Expo.
+Reads SMS directly from Android's inbox using `ContentResolver`.
 
-- Store all sensitive data encrypted locally.
+---
 
-- Support password generation and TOTP codes.
+### ✅ Step 2: SMS Parsing
 
-- Provide local backup and restore first.
+Completed.
 
-- Add Google Drive backup/sync later with minimal permissions.
+Extracts:
 
-- Add Android autofill only in the final stage.
+- Amount
+- Merchant
+- Card Last 4 Digits
+- UPI Reference
+- Category
 
-- Keep the app free to use for the core experience.
+Categories:
 
-## Non-Goals for Early Phases
+- Financial
+- OTP
+- Promotional
+- Other
 
-- No native autofill service in the first build.
+---
 
-- No backend server.
+### ✅ Step 3: React Native Integration
 
-- No user accounts outside Google sign-in for backup/sync.
+Completed.
 
-- No multi-device account system managed by your own server.
+Kotlin functions are exposed to React Native through a TypeScript bridge.
 
-- No complicated enterprise features.
+Example:
 
-- No browser extension in the initial version.
+```ts
+await SmsModule.getRecentSms(50);
+```
 
-## Product Principles
+---
 
-- Local first.
+### ✅ Step 4: Basic UI
 
-- Encrypt everything sensitive.
+Completed.
 
-- Keep the first version simple.
+Current UI supports:
 
-- Use Expo for speed early on.
+- Read recent SMS
+- Read all SMS
+- Read SMS after date
+- View parsed transaction data
 
-- Add native complexity only when it clearly unlocks value.
+---
 
-- Minimize permissions and external dependencies.
+# Next Milestone
 
-## Target Users
+## 🔥 Step 5: Real-Time SMS Listener
 
-- Individual users who want a simple password manager.
+Current State:
 
-- Beginner to intermediate users who prefer local control.
+```txt
+Open App
+↓
+Read Inbox
+↓
+Show Results
+```
 
-- Users who want backup/restore without relying on a central server.
+Target State:
 
-- Android users who may later want autofill in other apps.
+```txt
+New SMS Arrives
+↓
+BroadcastReceiver
+↓
+Kotlin Module
+↓
+React Native Event
+↓
+UI Updates Instantly
+```
 
-## Core User Stories
+Tasks:
 
-- As a user, I can create and store login credentials securely.
+- Create Android BroadcastReceiver
+- Register SMS_RECEIVED event
+- Add startListening()
+- Add stopListening()
+- Emit events to React Native
+- Update UI automatically
 
-- As a user, I can generate strong passwords.
+Success Criteria:
 
-- As a user, I can store and view TOTP secrets.
+- Send SMS from another phone
+- Message appears instantly
+- No manual refresh required
 
-- As a user, I can unlock the vault with biometrics or a master password.
+Status: NEXT TASK
 
-- As a user, I can back up my vault locally.
+---
 
-- As a user, I can restore my vault from a local backup.
+# Persistence Layer
 
-- As a user, I can later sync my encrypted vault to Google Drive.
+## Step 6: SQLite Database
 
-- As a user, I can later autofill credentials in other Android apps.
+Current State:
 
-## Phased Delivery Plan
+```txt
+SMS
+↓
+Displayed Only
+```
 
-### Phase 1: Expo-first foundation
+Target State:
 
-Focus on the app experience only. No native autofill code yet.
+```txt
+SMS
+↓
+Parsed
+↓
+Saved To SQLite
+```
 
-Deliverables:
+Tables:
 
-- App shell and navigation.
-
-- Onboarding flow.
-
-- Master password setup.
-
-- Vault unlock flow.
-
-- Credential list screen.
-
-- Add/edit/delete credential screens.
-
-- Password generator UI.
-
-- TOTP secret storage and code display.
-
-- Search and basic organization.
-
-- Local encryption and local database.
-
-- Local backup/export.
-
-- Local restore/import.
-
-- Settings screen.
-
-Success criteria:
-
-- A user can install, set up, unlock, store credentials, generate passwords, and restore a backup.
-
-- The app feels complete even without autofill.
-
-- Development is fast in Expo Go or Expo development builds without native Android work.
-
-### Phase 2: Cloud backup and sync
-
-Add Google Drive backup and restore after the local product works well.
-
-Deliverables:
-
-- Google sign-in using browser-based OAuth.
-
-- Consent screen and Drive API setup.
-
-- Encrypted vault upload to Google Drive app data storage.
-
-- Download and restore from Google Drive.
-
-- Token storage and refresh handling.
-
-- Sync status UI.
-
-Success criteria:
-
-- A user can connect Google Drive and back up encrypted data.
-
-- The app never uploads plaintext vault data.
-
-- Sync works without a backend.
-
-### Phase 3: Native Android autofill
-
-Add native autofill only after the UI, vault, and sync are stable.
-
-Deliverables:
-
-- Android AutofillService implementation.
-
-- App/package and website matching.
-
-- Dataset generation for login fields.
-
-- Save flow for new credentials.
-
-- User prompt to enable autofill in Android settings.
-
-- Fallbacks for unsupported apps.
-
-Success criteria:
-
-- The app can fill credentials in supported Android apps.
-
-- The autofill flow is reliable enough to be useful.
-
-- Native complexity is isolated and does not slow initial product iteration.
-
-## Functional Requirements
-
-### Vault and Credentials
-
-- Create, update, delete, and view credentials.
-
-- Store title, username, password, URL/domain, notes, and tags.
-
-- Support multiple accounts for the same site or app.
-
-- Allow copy actions for username, password, and TOTP code.
-
-### Password Generation
-
-- Generate secure passwords with configurable length and character sets.
-
-- Provide one-tap regenerate.
-
-- Allow copying or auto-inserting into fields.
-
-### TOTP
-
-- Store TOTP secret securely.
-
-- Display current OTP code and countdown.
-
-- Support common OTP secret formats.
-
-- Allow copy-to-clipboard.
-
-### Security
-
-- Encrypt vault data at rest.
-
-- Keep sensitive tokens in secure storage.
-
-- Require authentication before revealing secrets.
-
-- Support biometrics as a convenience layer.
-
-### Local Backup and Restore
-
-- Export encrypted vault file locally.
-
-- Import encrypted vault file locally.
-
-- Confirm before overwrite.
-
-- Validate backup file format before restore.
-
-### Google Drive Backup and Restore
-
-- Use browser-based OAuth.
-
-- Request the minimum viable Drive scope.
-
-- Store encrypted backup in Drive app data storage.
-
-- Restore encrypted data from Drive.
-
-- Handle token refresh.
-
-### Autofill Later
-
-- Detect app package names on Android.
-
-- Detect website domains for web login forms.
-
-- Return matching saved credentials.
-
-- Prompt user to enable autofill in Android settings.
-
-- Respect apps that cannot be filled.
-
-## Data Model Draft
-
-### Credential Entry
+### transactions
 
 - id
-
-- title
-
-- username
-
-- password
-
-- urlOrDomain
-
-- packageName
-
-- displayLabel
-
-- iconSource
-
-- notes
-
-- totpSecret
-
+- amount
+- merchant
+- cardLast4
 - category
+- timestamp
+- sender
+- rawSms
 
-- createdAt
+### cards
 
-- updatedAt
+- id
+- bankName
+- cardName
+- last4Digits
+- billingDate
+- dueDate
 
-### Backup Metadata
+Success Criteria:
 
-- backupVersion
+- Close app
+- Reopen app
+- Data still exists
 
-- createdAt
+Status: Pending
 
-- vaultHash
+---
 
-- encryptionVersion
+## Step 7: Auto Save New SMS
 
-- syncSource
+Flow:
 
-### Auth Metadata
+```txt
+SMS Arrives
+↓
+BroadcastReceiver
+↓
+Parse Transaction
+↓
+Save To SQLite
+↓
+Notify React Native
+```
 
-- provider
+No manual import required.
 
-- accessTokenReference
+Status: Pending
 
-- refreshTokenReference
+---
 
-- tokenExpiry
+# Card Management
 
-- grantedScopes
+## Step 8: Create Cards
 
-## Tech Stack
+Examples:
 
-### Phase 1 stack
+- HDFC Swiggy xxxx5678
+- Axis Ace xxxx1234
+- ICICI Amazon xxxx9012
 
-- Expo React Native
+Features:
 
-- Zustand for state management
+- Add Card
+- Edit Card
+- Delete Card
 
-- Expo Secure Store for secrets
+Status: Pending
 
-- Expo SQLite for local vault storage
+---
 
-- Expo File System for encrypted backup files
+## Step 9: Auto Match SMS To Card
 
-- Expo Local Authentication for biometrics
+Example:
 
-- A TOTP library such as otplib
+```txt
+SMS:
+Rs.499 spent on card xx5678
+```
 
-### Phase 2 stack
+Match with:
 
-- Expo AuthSession
+```txt
+HDFC Swiggy
+Last 4: 5678
+```
 
-- Expo Web Browser
+Transaction becomes linked to the card.
 
-- Google Cloud OAuth client setup
+Status: Pending
 
-- Google Drive API calls through REST
+---
 
-### Phase 3 stack
+# Calendar UI
 
-- Native Android AutofillService
+## Step 10: Monthly Calendar
 
-- Expo prebuild and development build
+Features:
 
-- Android native module code only for autofill
+- Previous Month
+- Current Month
+- Next Month
+- Daily Transactions
 
-## Configuration Requirements
+Example:
 
-### Expo app configuration
+```txt
+May 30
+• ₹499 Swiggy
 
-- app name
+May 31
+• ₹200 Uber
+```
 
-- app slug
+Status: Pending
 
-- app icon
+---
 
-- custom scheme
+## Step 11: Billing & Due Dates
 
-- Android package name
+Store:
 
-- iOS bundle identifier if later needed
+- Billing Date
+- Due Date
 
-- versioning configuration
+Calendar Indicators:
 
-### Google Cloud configuration
+- Upcoming
+- Paid
+- Overdue
 
-- Google Cloud project
+Target UI similar to finance calendar apps.
 
-- Drive API enabled
+Status: Pending
 
-- OAuth consent screen configured
+---
 
-- Android OAuth client created
+# Background Reliability
 
-- SHA-1 certificate fingerprint registered
+## Step 12: App Closed Support
 
-- package name registered
+Scenario:
 
-- redirect URI configured
+```txt
+App Closed
+↓
+SMS Arrives
+↓
+Transaction Saved
+```
 
-### Security configuration
+Requirements:
 
-- Encryption key generation strategy
+- BroadcastReceiver
+- SQLite write
 
-- Secure local secret storage
+Status: Pending
 
-- Backup encryption strategy
+---
 
-- Session timeout policy
+## Step 13: Startup Sync
 
-## UX Requirements
+When app launches:
 
-- Fast unlock.
+```txt
+Read Recent SMS
+↓
+Compare With Database
+↓
+Import Missing Entries
+```
 
-- Clear vault list.
+Prevents missing transactions.
 
-- One-tap copy actions.
+Status: Pending
 
-- Simple add-entry flow.
+---
 
-- Password generator visible during creation.
+# Analytics
 
-- TOTP visible in credential detail screen.
+## Step 14: Filters
 
-- Backup and restore easy to find.
+Filters:
 
-- Settings should explain what is local and what is cloud-based.
+- Financial
+- OTP
+- Promotional
+- Other
 
-- Autofill should be introduced later as a dedicated Android feature, not part of the first UI sprint.
+Status: Pending
 
-## Release Strategy
+---
 
-### Release 1
+## Step 15: Spending Analytics
 
-- Local vault
+Reports:
 
-- Password generation
+- Monthly Spend
+- Category Spend
+- Card Spend
+- Merchant Spend
 
-- TOTP
+Status: Pending
 
-- Biometrics
+---
 
-- Local backup/restore
+## Step 16: Due Date Notifications
 
-- No native autofill
+Examples:
 
-- Expo-first build speed
+- Due in 3 days
+- Due tomorrow
+- Bill generated
 
-### Release 2
+Status: Pending
 
-- Google Drive backup/restore
+---
 
-- OAuth sign-in
+# Immediate Focus
 
-- Sync status
+Current Sprint:
 
-### Release 3
+1. BroadcastReceiver
+2. SMS_RECEIVED event
+3. React Native listener
+4. Real-time UI updates
+5. Real device testing
 
-- Android autofill service
-
-- App matching and website matching
-
-- Better icon detection and metadata matching
-
-## Risks
-
-- Autofill native work can slow early iteration if introduced too soon.
-
-- Google OAuth setup can be confusing for beginners.
-
-- Encryption and restore flow must be tested carefully to avoid data loss.
-
-- Different Android apps will support autofill differently.
-
-- Token refresh and sync edge cases can be tricky.
-
-## Mitigation
-
-- Delay autofill until the core app is stable.
-
-- Keep the first version local-first and simple.
-
-- Use encrypted backups only.
-
-- Keep Google permissions minimal.
-
-- Test restore flows repeatedly before cloud sync launch.
-
-- Add autofill only after the app UI and vault behavior are dependable.
-
-## Definition of Done for Phase 1
-
-- User can create vault and unlock it.
-
-- User can store and retrieve credentials.
-
-- User can generate passwords.
-
-- User can store and view TOTP codes.
-
-- User can export and restore encrypted backups locally.
-
-- App works well in Expo without native autofill code.
-
-## Definition of Done for Phase 2
-
-- User can sign in with Google.
-
-- User can back up encrypted vault to Drive.
-
-- User can restore from Drive.
-
-- No plaintext secrets are uploaded.
-
-## Definition of Done for Phase 3
-
-- Android autofill works for supported login screens.
-
-- App/package matching and website matching are reliable.
-
-- Autofill setup is documented inside the app.
-
-- Native code is isolated to the autofill layer only.
+Do not start Calendar, Analytics, or Notifications until Real-Time SMS Listener is working correctly.
