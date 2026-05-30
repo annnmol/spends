@@ -2,6 +2,7 @@ import type { SmsMessage } from "../../modules/sms-module";
 import type { Account } from "./accounts";
 import { getDb } from "./db";
 import { matchAccount } from "./matchAccount";
+import { matchMerchant, type Merchant } from "./merchants";
 import { parseTransactionSms } from "./parseTransactionSms";
 
 export type Transaction = {
@@ -10,6 +11,7 @@ export type Transaction = {
   body: string;
   timestamp: number;
   accountId: number | null;
+  merchantId: number | null;
   transactionType: string;
   category: string;
   amount: number | null;
@@ -35,6 +37,7 @@ export async function saveTransaction(
   msg: SmsMessage,
   smsId: string | null,
   accounts: Account[] = [],
+  merchants: Merchant[] = [],
 ): Promise<void> {
   const parsed = parseTransactionSms(msg.body, msg.sender);
   if (parsed.sourceType === "OTP" || parsed.sourceType === "SYSTEM") return;
@@ -61,14 +64,19 @@ export async function saveTransaction(
     parsed.confidence,
     "active",
   );
-  if (result.changes > 0 && accounts.length > 0) {
-    const accountId = matchAccount(accounts, parsed.cardLast4, parsed.upiRef, msg.body);
-    if (accountId !== null) {
-      await db.runAsync(
-        "UPDATE transactions SET account_id = ? WHERE id = ?",
-        accountId,
-        result.lastInsertRowId,
-      );
+  if (result.changes > 0) {
+    let linkedAccountId: number | null = null;
+    if (accounts.length > 0) {
+      linkedAccountId = matchAccount(accounts, parsed.cardLast4, parsed.upiRef, msg.body);
+      if (linkedAccountId !== null) {
+        await db.runAsync("UPDATE transactions SET account_id = ? WHERE id = ?", linkedAccountId, result.lastInsertRowId);
+      }
+    }
+    if (merchants.length > 0 && linkedAccountId !== null) {
+      const merchantId = matchMerchant(merchants, msg.body);
+      if (merchantId !== null) {
+        await db.runAsync("UPDATE transactions SET merchant_id = ? WHERE id = ?", merchantId, result.lastInsertRowId);
+      }
     }
   }
 }
@@ -100,9 +108,10 @@ export async function saveTransactions(
   msgs: SmsMessage[],
   useInboxId: boolean,
   accounts: Account[] = [],
+  merchants: Merchant[] = [],
 ): Promise<void> {
   await Promise.all(
-    msgs.map((msg) => saveTransaction(msg, useInboxId ? msg.id : null, accounts)),
+    msgs.map((msg) => saveTransaction(msg, useInboxId ? msg.id : null, accounts, merchants)),
   );
 }
 
@@ -117,6 +126,7 @@ type TransactionRow = {
   amount: number | null;
   merchant: string | null;
   account_id: number | null;
+  merchant_id: number | null;
   source_type: string | null;
   confidence: string | null;
   status: string | null;
@@ -135,7 +145,7 @@ export async function clearAllTransactions(): Promise<void> {
 export async function loadTransactions(): Promise<Transaction[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<TransactionRow>(
-    "SELECT sms_id, message_hash, sender, raw_sms, timestamp, transaction_type, category, amount, merchant, account_id, source_type, confidence, status FROM transactions ORDER BY timestamp DESC",
+    "SELECT sms_id, message_hash, sender, raw_sms, timestamp, transaction_type, category, amount, merchant, account_id, merchant_id, source_type, confidence, status FROM transactions ORDER BY timestamp DESC",
   );
   return rows.map((row) => ({
     id: row.sms_id ?? row.message_hash,
@@ -143,6 +153,7 @@ export async function loadTransactions(): Promise<Transaction[]> {
     body: row.raw_sms,
     timestamp: row.timestamp,
     accountId: row.account_id ?? null,
+    merchantId: row.merchant_id ?? null,
     transactionType: row.transaction_type ?? "unknown",
     category: row.category ?? "unknown",
     amount: row.amount ?? null,

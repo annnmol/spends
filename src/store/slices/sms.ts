@@ -7,9 +7,10 @@ import {
   saveTransactions,
   type Transaction,
 } from "@mobile/lib/transactions";
-import SmsModule from "../../../modules/sms-module";
 import type { SmsMessage } from "../../../modules/sms-module";
+import SmsModule from "../../../modules/sms-module";
 import { useAccountsStore } from "./accounts";
+import { useMerchantsStore } from "./merchants";
 
 // Dec 1 2025 00:00:00 IST
 const SINCE_TIMESTAMP = 1764527400000;
@@ -93,8 +94,9 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     set({ error: null, loading: true });
     try {
       const accounts = useAccountsStore.getState().accounts;
+      const merchants = useMerchantsStore.getState().merchants;
       const list = await SmsModule.getRecentSms(50);
-      await saveTransactions(list, true, accounts);
+      await saveTransactions(list, true, accounts, merchants);
       set({ messages: await loadTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
@@ -107,8 +109,9 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     set({ error: null, loading: true });
     try {
       const accounts = useAccountsStore.getState().accounts;
+      const merchants = useMerchantsStore.getState().merchants;
       const list = await SmsModule.getAllSms();
-      await saveTransactions(list, true, accounts);
+      await saveTransactions(list, true, accounts, merchants);
       set({ messages: await loadTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
@@ -121,8 +124,9 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     set({ error: null, loading: true });
     try {
       const accounts = useAccountsStore.getState().accounts;
+      const merchants = useMerchantsStore.getState().merchants;
       const list = await SmsModule.getSmsAfterDate(SINCE_TIMESTAMP);
-      await saveTransactions(list, true, accounts);
+      await saveTransactions(list, true, accounts, merchants);
       set({ messages: await loadTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
@@ -149,7 +153,8 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
 
   addMessage: async (msg: SmsMessage) => {
     const accounts = useAccountsStore.getState().accounts;
-    await saveTransaction(msg, null, accounts);
+    const merchants = useMerchantsStore.getState().merchants;
+    await saveTransaction(msg, null, accounts, merchants);
     set({ messages: await loadTransactions() });
   },
 
@@ -209,7 +214,8 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
       set({ pendingCount: pending.length });
       if (pending.length > 0) {
         const accounts = useAccountsStore.getState().accounts;
-        await saveTransactions(pending, false, accounts);
+        const merchants = useMerchantsStore.getState().merchants;
+        await saveTransactions(pending, false, accounts, merchants);
         set({ messages: await loadTransactions() });
       }
     } catch (e) {

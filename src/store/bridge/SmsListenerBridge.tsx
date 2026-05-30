@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { addSmsReceivedListener } from "../../../modules/sms-module";
 import { useAccountsStore } from "../slices/accounts";
+import { useMerchantsStore } from "../slices/merchants";
 import { useSmsStore } from "../slices/sms";
 
 /**
@@ -17,11 +18,10 @@ import { useSmsStore } from "../slices/sms";
 export function SmsListenerBridge() {
   const listening = useSmsStore((s) => s.listening);
 
-  // Boot: load accounts first, then init SMS (so first live SMS gets matched)
+  // Boot: accounts → merchants → sms (each depends on previous for matching)
   useEffect(() => {
-    useAccountsStore
-      .getState()
-      .init()
+    useAccountsStore.getState().init()
+      .then(() => useMerchantsStore.getState().init())
       .then(() => useSmsStore.getState().init());
   }, []);
 

@@ -35,6 +35,15 @@ export async function getDb(): Promise<SQLite.SQLiteDatabase> {
       created_at   INTEGER NOT NULL,
       updated_at   INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS merchants (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      name         TEXT NOT NULL,
+      category     TEXT NOT NULL DEFAULT 'other',
+      slugs        TEXT NOT NULL DEFAULT '[]',
+      notes        TEXT,
+      created_at   INTEGER NOT NULL,
+      updated_at   INTEGER NOT NULL
+    );
   `);
   await _runMigrations(_db);
   return _db;
@@ -59,5 +68,10 @@ async function _runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     await db.execAsync("ALTER TABLE transactions ADD COLUMN confidence TEXT;");
     await db.execAsync("ALTER TABLE transactions ADD COLUMN status TEXT DEFAULT 'active';");
     await db.execAsync("PRAGMA user_version = 3;");
+  }
+
+  if (version < 4) {
+    await db.execAsync("ALTER TABLE transactions ADD COLUMN merchant_id INTEGER REFERENCES merchants(id);");
+    await db.execAsync("PRAGMA user_version = 4;");
   }
 }
