@@ -1132,9 +1132,246 @@ May 31
 
 Status: Pending
 
+# Step 10.5: Calendar & Timeline System
+
+Goal
+
+Provide multiple calendar views for transactions, statements, bills, due dates, subscriptions, and account events.
+
+The calendar should not be limited to displaying dates only.
+
+Each date can contain multiple financial events and transactions.
+
+Inspired by:
+
+Google Calendar
+Apple Calendar
+Outlook Calendar
+Finance Tracker Apps
+Calendar Views
+Month View
+
+Primary default view.
+
+Features:
+
+Previous Month
+Current Month
+Next Month
+Financial Event Indicators
+Account Icons
+Due Date Indicators
+Statement Indicators
+Payment Indicators
+Subscription Indicators
+
+Example:
+
+May 3
+
+HDFC Due
+Netflix Renewal
+
+May 5
+
+Axis Due
+
+May 25
+
+Salary Credited
+Week View
+
+Financial timeline for a week.
+
+Features:
+
+Horizontal Day Layout
+Multiple Events Per Day
+Event Blocks
+Account Indicators
+Merchant Indicators
+
+Example:
+
+Monday
+
+Salary Credit
+Netflix Renewal
+
+Tuesday
+
+HDFC Statement Generated
+
+Wednesday
+
+Swiggy Spend
+Day View
+
+Detailed timeline view.
+
+Similar to Google Calendar.
+
+Features:
+
+Time Blocks
+Event Blocks
+Multiple Events Per Day
+Transaction Timeline
+Payment Timeline
+
+Example:
+
+09:00 AM
+
+Salary Credited
+
+02:00 PM
+
+Netflix Subscription
+
+06:00 PM
+
+Swiggy Order
+
+08:00 PM
+
+UPI Rent Payment
+
+Event Types
+
+Calendar supports:
+
+Transaction Events
+Statement Events
+Due Date Events
+Payment Events
+Subscription Events
+Refund Events
+Salary Credit Events
+Calendar Event Structure
+
+Each calendar event contains:
+
+id
+accountId
+transactionId
+merchantId
+eventType
+title
+description
+amount
+startDate
+endDate
+color
+icon
+Event Types
+
+Supported:
+
+TRANSACTION
+STATEMENT
+PAYMENT_DUE
+PAYMENT_COMPLETED
+SUBSCRIPTION
+REFUND
+CREDIT
+DEBIT
+OTHER
+Calendar Indicators
+
+Month view should support:
+
+Account Indicators
+
+Examples:
+
+HDFC
+ICICI
+SBI
+Personal UPI
+Merchant Indicators
+
+Examples:
+
+Netflix
+YouTube Premium
+Swiggy
+Amazon
+Uber
+Status Indicators
+Upcoming
+Paid
+Overdue
+Refunded
+Monthly Transaction Preview
+
+Each day can display multiple entries.
+
+Example:
+
+May 30
+
+• ₹499 Swiggy
+
+• ₹649 Netflix
+
+• ₹10,000 Salary Credit
+
+May 31
+
+• ₹200 Uber
+
+• ₹8991 HDFC Due
+
+Calendar Filters
+
+Filter by:
+
+Account
+
+Examples:
+
+HDFC Swiggy
+ICICI Salary
+Personal UPI
+Merchant
+
+Examples:
+
+Netflix
+Swiggy
+Amazon
+Uber
+Transaction Type
+DEBIT
+CREDIT
+REFUND
+PAYMENT
+STATEMENT
+Event Type
+Transactions
+Bills
+Statements
+Subscriptions
+Future Support
+
+The calendar architecture must support:
+
+Recurring Subscriptions
+Recurring Bills
+EMI Tracking
+Salary Tracking
+Reminder Scheduling
+Account-Based Filtering
+Merchant-Based Filtering
+
+without database redesign.
+
+Status: Planned
+
 ---
 
-## Step 11: Billing & Due Dates
+## Step 11.5: Billing & Due Dates
 
 Store:
 
@@ -1150,6 +1387,100 @@ Calendar Indicators:
 Target UI similar to finance calendar apps.
 
 Status: Pending
+
+Step 11: Billing, Statements & Due Dates
+Goal
+
+Track statement generation, billing cycles, due dates, and payment status for all supported account types.
+
+Supported Account Types
+Credit Cards
+Debit Cards
+Bank Accounts
+UPI Accounts
+Wallets
+Other
+Statement Tracking
+
+Store:
+
+Statement Month
+Statement Date
+Total Due
+Minimum Due
+Due Date
+Payment Status
+Payment Status
+
+Supported:
+
+UPCOMING
+PAID
+PARTIALLY_PAID
+OVERDUE
+Dashboard Integration
+
+Used by:
+
+Home Screen
+Calendar
+Insights
+Notifications
+Calendar Integration
+
+Examples:
+
+May 3
+
+HDFC Due ₹8991
+
+Status:
+
+PAID
+
+May 5
+
+Axis Due ₹14530
+
+Status:
+
+UPCOMING
+
+May 30
+
+ICICI Due ₹40348
+
+Status:
+
+OVERDUE
+
+Reminder Integration
+
+Generate reminders for:
+
+7 Days Before Due
+3 Days Before Due
+1 Day Before Due
+Due Today
+Future Subscription Support
+
+Examples:
+
+Netflix
+
+₹649 Monthly
+
+YouTube Premium
+
+₹149 Monthly
+
+Google One
+
+₹130 Monthly
+
+These should appear as recurring calendar events and future due reminders.
+
+Status: Planned
 
 ---
 

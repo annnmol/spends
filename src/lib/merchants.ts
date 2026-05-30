@@ -26,11 +26,6 @@ export type CreateMerchantInput = {
   notes?: string | null;
 };
 
-export type DetectedMerchant = CreateMerchantInput & {
-  txnCount: number;
-  totalSpend: number;
-};
-
 type MerchantRow = {
   id: number;
   name: string;
@@ -54,17 +49,6 @@ function rowToMerchant(row: MerchantRow): Merchant {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
-}
-
-function guessMerchantCategory(name: string): MerchantCategory {
-  const n = name.toUpperCase();
-  if (/SWIGGY|ZOMATO|DOMINOS|PIZZA|MCDONALDS|KFC|STARBUCKS|BURGER|FOOD|EATERY/.test(n)) return "food";
-  if (/UBER|OLA|RAPIDO|METRO|RAILWAY|IRCTC|MAKEMYTRIP|GOIBIBO|REDBUS|IXIGO/.test(n)) return "transport";
-  if (/NETFLIX|HOTSTAR|PRIMEVIDEO|SPOTIFY|YOUTUBE|BOOKMYSHOW|ZEE5|SONYLIV|HUNGAMA/.test(n)) return "entertainment";
-  if (/AMAZON PRIME|ICLOUD|GOOGLE ONE|MICROSOFT|ADOBE|DROPBOX/.test(n)) return "subscription";
-  if (/ELECTRICITY|GAS|WATER|BROADBAND|AIRTEL|JIO|BSNL|TATA SKY|DISH TV|RECHARGE/.test(n)) return "utilities";
-  if (/AMAZON|FLIPKART|MYNTRA|MEESHO|NYKAA|AJIO/.test(n)) return "shopping";
-  return "other";
 }
 
 export function matchMerchant(merchants: Merchant[], body: string): number | null {
@@ -144,44 +128,6 @@ export async function linkAllUnlinkedMerchants(merchants: Merchant[]): Promise<v
       await db.runAsync("UPDATE transactions SET merchant_id = ? WHERE id = ?", merchantId, row.id);
     }
   }
-}
-
-export async function detectMerchantsFromTransactions(): Promise<DetectedMerchant[]> {
-  const db = await getDb();
-
-  const existing = await db.getAllAsync<{ name: string }>("SELECT name FROM merchants");
-  const existingNames = new Set(existing.map((r) => r.name.toUpperCase()));
-
-  const rows = await db.getAllAsync<{ merchant: string; amount: number | null }>(
-    "SELECT merchant, amount FROM transactions WHERE category = 'financial' AND merchant IS NOT NULL AND account_id IS NOT NULL",
-  );
-
-  type Group = { count: number; totalSpend: number };
-  const groups = new Map<string, Group>();
-
-  for (const row of rows) {
-    const key = row.merchant.toUpperCase();
-    if (!groups.has(key)) groups.set(key, { count: 0, totalSpend: 0 });
-    const g = groups.get(key)!;
-    g.count++;
-    if (row.amount) g.totalSpend += row.amount;
-  }
-
-  const results: DetectedMerchant[] = [];
-
-  for (const [key, g] of groups.entries()) {
-    if (existingNames.has(key)) continue;
-    const displayName = key.charAt(0) + key.slice(1).toLowerCase();
-    results.push({
-      name: displayName,
-      category: guessMerchantCategory(key),
-      slugs: [key],
-      txnCount: g.count,
-      totalSpend: g.totalSpend,
-    });
-  }
-
-  return results.sort((a, b) => b.txnCount - a.txnCount);
 }
 
 export async function clearAllMerchants(): Promise<void> {

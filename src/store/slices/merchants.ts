@@ -5,12 +5,10 @@ import {
   createMerchant as dbCreate,
   deleteMerchant as dbDelete,
   updateMerchant as dbUpdate,
-  detectMerchantsFromTransactions,
   linkAllUnlinkedMerchants,
   loadMerchants,
   unlinkTransactionsForMerchant,
   type CreateMerchantInput,
-  type DetectedMerchant,
   type Merchant,
 } from "@mobile/lib/merchants";
 
@@ -23,8 +21,6 @@ export type MerchantsState = {
   createMerchant: (data: CreateMerchantInput) => Promise<void>;
   updateMerchant: (id: number, data: Partial<CreateMerchantInput>) => Promise<void>;
   deleteMerchant: (id: number) => Promise<void>;
-  scanFromTransactions: () => Promise<DetectedMerchant[]>;
-  importMerchants: (detected: DetectedMerchant[]) => Promise<void>;
   clearMerchants: () => Promise<void>;
 };
 
@@ -76,28 +72,6 @@ export const useMerchantsStore = create<MerchantsState>()((set) => ({
       await dbDelete(id);
       const merchants = await loadMerchants();
       set({ merchants });
-    } catch (e) {
-      set({ error: e instanceof Error ? e.message : String(e) });
-    }
-  },
-
-  scanFromTransactions: async () => {
-    set({ loading: true, error: null });
-    try {
-      return await detectMerchantsFromTransactions();
-    } catch (e) {
-      set({ error: e instanceof Error ? e.message : String(e) });
-      return [];
-    } finally {
-      set({ loading: false });
-    }
-  },
-
-  importMerchants: async (detected) => {
-    set({ error: null });
-    try {
-      await Promise.all(detected.map((d) => dbCreate(d)));
-      await refreshAndLink();
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     }

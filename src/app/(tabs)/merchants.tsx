@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   ScrollView,
@@ -15,7 +14,6 @@ import AppButton from "@mobile/components/ui/button";
 import AppText from "@mobile/components/ui/text";
 import type {
   CreateMerchantInput,
-  DetectedMerchant,
   Merchant,
   MerchantCategory,
 } from "@mobile/lib/merchants";
@@ -41,7 +39,7 @@ const CATEGORY_LABELS: Record<MerchantCategory, string> = {
   other: "Other",
 };
 
-type Mode = "list" | "add" | "edit" | "scan";
+type Mode = "list" | "add" | "edit";
 
 const EMPTY_FORM = {
   name: "",
@@ -72,8 +70,6 @@ export default function MerchantsScreen() {
   const [mode, setMode] = useState<Mode>("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [scanResults, setScanResults] = useState<DetectedMerchant[]>([]);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
 
   function openAdd() {
@@ -122,31 +118,6 @@ export default function MerchantsScreen() {
         },
       ],
     );
-  }
-
-  async function handleScan() {
-    setMode("scan");
-    const results = await store().scanFromTransactions();
-    setScanResults(results);
-    setSelected(new Set(results.map((_, i) => i)));
-  }
-
-  async function handleImport() {
-    const toImport = scanResults.filter((_, i) => selected.has(i));
-    if (toImport.length === 0) return;
-    setSaving(true);
-    await store().importMerchants(toImport);
-    setSaving(false);
-    setMode("list");
-  }
-
-  function toggleSelect(i: number) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(i)) next.delete(i);
-      else next.add(i);
-      return next;
-    });
   }
 
   if (mode === "add" || mode === "edit") {
@@ -216,85 +187,6 @@ export default function MerchantsScreen() {
     );
   }
 
-  if (mode === "scan") {
-    return (
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-        <View style={styles.header}>
-          <AppText variant="title">Scan from Transactions</AppText>
-        </View>
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator />
-            <AppText variant="caption" style={styles.dim}>
-              Scanning transactions…
-            </AppText>
-          </View>
-        ) : scanResults.length === 0 ? (
-          <View style={styles.center}>
-            <AppText variant="caption" style={styles.dim}>
-              No merchants detected. Import transactions first.
-            </AppText>
-            <AppButton onPress={() => setMode("list")} variant="outline">
-              Back
-            </AppButton>
-          </View>
-        ) : (
-          <>
-            <FlatList
-              data={scanResults}
-              keyExtractor={(_, i) => String(i)}
-              contentContainerStyle={styles.list}
-              renderItem={({ item, index }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.scanItem,
-                    selected.has(index) && styles.scanItemSelected,
-                  ]}
-                  onPress={() => toggleSelect(index)}
-                >
-                  <View style={styles.scanItemRow}>
-                    <View style={styles.scanItemInfo}>
-                      <AppText variant="default">{item.name}</AppText>
-                      <AppText variant="caption" style={styles.dim}>
-                        {CATEGORY_LABELS[item.category]}
-                      </AppText>
-                      <AppText variant="caption" style={styles.dim}>
-                        {item.txnCount} txns · ₹{item.totalSpend.toLocaleString("en-IN")}
-                      </AppText>
-                    </View>
-                    <View
-                      style={[
-                        styles.checkbox,
-                        selected.has(index) && styles.checkboxSelected,
-                      ]}
-                    >
-                      {selected.has(index) && (
-                        <AppText variant="caption" style={styles.checkmark}>
-                          ✓
-                        </AppText>
-                      )}
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
-            <View style={styles.scanActions}>
-              <AppButton onPress={() => setMode("list")} variant="outline">
-                Cancel
-              </AppButton>
-              <AppButton
-                onPress={handleImport}
-                disabled={saving || selected.size === 0}
-              >
-                {saving ? "Importing…" : `Import ${selected.size}`}
-              </AppButton>
-            </View>
-          </>
-        )}
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <View style={styles.header}>
@@ -308,9 +200,6 @@ export default function MerchantsScreen() {
 
       <View style={styles.topActions}>
         <AppButton onPress={openAdd}>Add Merchant</AppButton>
-        <AppButton onPress={handleScan} variant="outline">
-          Scan from Transactions
-        </AppButton>
       </View>
 
       {error ? (
@@ -326,7 +215,7 @@ export default function MerchantsScreen() {
         ListEmptyComponent={
           <View style={styles.center}>
             <AppText variant="caption" style={styles.dim}>
-              No merchants yet. Add one manually or scan from transactions.
+              No merchants yet. Tap "Add Merchant" to create one.
             </AppText>
           </View>
         }
@@ -418,29 +307,6 @@ const styles = StyleSheet.create({
   actionBtn: { paddingVertical: 4 },
   editLabel: { color: "#2563eb" },
   deleteLabel: { color: "#dc2626" },
-  scanItem: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  scanItemSelected: { borderColor: "#111827" },
-  scanItemRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  scanItemInfo: { flex: 1, gap: 2 },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxSelected: { backgroundColor: "#111827", borderColor: "#111827" },
-  checkmark: { color: "#fff", fontSize: 12 },
-  scanActions: { flexDirection: "row", gap: 8, padding: 16 },
   errorBox: {
     margin: 16,
     padding: 12,
