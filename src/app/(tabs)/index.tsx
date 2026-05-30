@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
 import { Calendar } from "react-native-calendars";
+import { BarChart } from "react-native-gifted-charts";
 import { SafeAreaView } from "react-native-safe-area-context";
-// import { BarChart } from "react-native-gifted-charts";
 
 import AppText from "@mobile/components/ui/text";
 import type { Transaction } from "@mobile/lib/transactions";
@@ -166,7 +166,7 @@ export default function HomeScreen() {
             <AppText variant="small" style={styles.sectionLabel}>
               Daily Spend — {MONTH_NAMES[month]} {year}
             </AppText>
-            {/* <BarChart
+            <BarChart
               data={barData}
               barWidth={barW}
               spacing={2}
@@ -181,7 +181,7 @@ export default function HomeScreen() {
               rulesColor="#f3f4f6"
               initialSpacing={barW / 2}
               endSpacing={barW / 2}
-            /> */}
+            />
           </View>
         )}
 

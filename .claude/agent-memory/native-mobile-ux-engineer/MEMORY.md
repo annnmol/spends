@@ -1,0 +1,1 @@
+- [Project Stack](project-stack.md) — Expo SDK 56, Expo Router tabs, path aliases, theme system, key UI components, StyleSheet-only styling rule

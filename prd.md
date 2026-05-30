@@ -1371,7 +1371,7 @@ Status: Planned
 
 ---
 
-## Step 11.5: Billing & Due Dates
+## Step 11: Billing & Due Dates
 
 Store:
 
@@ -1388,7 +1388,8 @@ Target UI similar to finance calendar apps.
 
 Status: Pending
 
-Step 11: Billing, Statements & Due Dates
+# Step 11.5: Billing, Statements & Due Dates
+
 Goal
 
 Track statement generation, billing cycles, due dates, and payment status for all supported account types.
