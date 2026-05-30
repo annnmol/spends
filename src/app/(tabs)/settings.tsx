@@ -7,6 +7,7 @@ import AppText from "@mobile/components/ui/text";
 import { useSmsStore } from "@mobile/store/slices/sms";
 
 import { useAccountsStore } from "@mobile/store/slices/accounts";
+import { useMerchantsStore } from "@mobile/store/slices/merchants";
 
 export default function SettingsScreen() {
   const permission = useSmsStore((s) => s.permission);
@@ -21,6 +22,7 @@ export default function SettingsScreen() {
   async function handleClearAll() {
     await useSmsStore.getState().clearTransactions();
     await useAccountsStore.getState().clearAccounts();
+    await useMerchantsStore.getState().clearMerchants();
   }
 
   return (

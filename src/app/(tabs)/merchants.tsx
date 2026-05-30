@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppButton from "@mobile/components/ui/button";
+import MerchantIcon from "@mobile/components/ui/merchant-icon";
 import AppText from "@mobile/components/ui/text";
 import type {
   CreateMerchantInput,
@@ -221,6 +222,11 @@ export default function MerchantsScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
+            <MerchantIcon
+              name={item.name}
+              slugs={item.slugs}
+              size={44}
+            />
             <View style={styles.cardMain}>
               <AppText variant="default">{item.name}</AppText>
               <AppText variant="caption" style={styles.dim}>

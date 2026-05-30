@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import BankIcon from "@mobile/components/ui/bank-icon";
 import AppButton from "@mobile/components/ui/button";
 import AppText from "@mobile/components/ui/text";
 import type {
@@ -317,6 +318,11 @@ export default function AccountsScreen() {
                   onPress={() => toggleSelect(index)}
                 >
                   <View style={styles.scanItemRow}>
+                    <BankIcon
+                      bankName={item.bankName}
+                      slugs={item.slugs}
+                      size={36}
+                    />
                     <View style={styles.scanItemInfo}>
                       <AppText variant="default">{item.name}</AppText>
                       <AppText variant="caption" style={styles.dim}>
@@ -400,6 +406,11 @@ export default function AccountsScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
+            <BankIcon
+              bankName={item.bankName}
+              slugs={item.slugs}
+              size={44}
+            />
             <View style={styles.cardMain}>
               <AppText variant="default">{item.name}</AppText>
               <AppText variant="caption" style={styles.dim}>
