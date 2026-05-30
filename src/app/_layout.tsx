@@ -4,7 +4,7 @@ import GlobalProviders from "../store/context/providers";
 export default function RootLayout() {
   return (
     <GlobalProviders>
-      <Stack />
+      <Stack screenOptions={{ headerShown: false }} />
     </GlobalProviders>
   );
 }

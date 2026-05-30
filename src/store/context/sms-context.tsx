@@ -1,19 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type PropsWithChildren,
+} from "react";
 
-import PermissionStatus, {
-  type PermissionState,
-} from "@mobile/components/sms/PermissionStatus";
-import SmsCard from "@mobile/components/sms/SmsCard";
-import AppButton from "@mobile/components/ui/button";
-import AppText from "@mobile/components/ui/text";
 import {
   clearAllTransactions,
   loadTransactions,
@@ -23,19 +16,48 @@ import {
 import SmsModule, {
   addSmsReceivedListener,
   type SmsMessage,
-} from "../../modules/sms-module";
+} from "../../../modules/sms-module";
 
 // Dec 1 2025 00:00:00 IST
 const SINCE_TIMESTAMP = 1764527400000;
 
-function toState(status: string): PermissionState {
+function toPermissionState(status: string): "granted" | "denied" | "unknown" {
   if (status === "granted") return "granted";
   if (status === "denied") return "denied";
   return "unknown";
 }
 
-export default function HomeScreen() {
-  const [permission, setPermission] = useState<PermissionState>("unknown");
+type SmsContextValue = {
+  permission: "granted" | "denied" | "unknown";
+  loading: boolean;
+  listening: boolean;
+  error: string | null;
+  messages: SmsMessage[];
+  pendingCount: number | null;
+  onGrant: () => Promise<void>;
+  onRead: () => Promise<void>;
+  onReadAll: () => Promise<void>;
+  onReadSince: () => Promise<void>;
+  onToggleListen: () => Promise<void>;
+  onFakeFinancial: () => Promise<void>;
+  onFakeOtp: () => Promise<void>;
+  onFakePromo: () => Promise<void>;
+  onFakeDelayed: () => Promise<void>;
+  onCheckQueue: () => Promise<void>;
+  onClearQueue: () => Promise<void>;
+  onClearDb: () => Promise<void>;
+};
+
+const SmsContext = createContext<SmsContextValue | null>(null);
+
+export function useSms(): SmsContextValue {
+  const ctx = useContext(SmsContext);
+  if (!ctx) throw new Error("useSms must be used inside SmsProvider");
+  return ctx;
+}
+
+export function SmsProvider({ children }: PropsWithChildren) {
+  const [permission, setPermission] = useState<"granted" | "denied" | "unknown">("unknown");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +67,7 @@ export default function HomeScreen() {
   useEffect(() => {
     SmsModule.getSmsPermissionStatus()
       .then((res) => {
-        const state = toState(res.status);
+        const state = toPermissionState(res.status);
         setPermission(state);
         if (state === "granted") {
           SmsModule.startListening()
@@ -63,7 +85,6 @@ export default function HomeScreen() {
       .catch(() => {});
   }, []);
 
-  // Subscribe to live SMS events while listening is active
   useEffect(() => {
     if (!listening) return;
     const sub = addSmsReceivedListener((msg) => {
@@ -77,8 +98,14 @@ export default function HomeScreen() {
     setError(null);
     try {
       const res = await SmsModule.requestSmsPermission();
-      setPermission(toState(res.status));
-      if (!res.granted) setError("SMS permission required");
+      const state = toPermissionState(res.status);
+      setPermission(state);
+      if (!res.granted) {
+        setError("SMS permission required");
+      } else {
+        await SmsModule.startListening();
+        setListening(true);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -221,141 +248,30 @@ export default function HomeScreen() {
     }
   }, []);
 
-  const canRead = permission === "granted";
-
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <AppText variant="title">SMS Reader Native Demo</AppText>
-          <AppButton
-            onPress={onClearDb}
-            variant="outline"
-            style={styles.clearDbBtn}
-          >
-            Clear DB
-          </AppButton>
-        </View>
-        <PermissionStatus state={permission} />
-        {messages.length > 0 && (
-          <AppText variant="caption" style={styles.countText}>
-            {messages.length} messages loaded
-            {listening ? "  •  live" : ""}
-          </AppText>
-        )}
-      </View>
-
-      <ScrollView
-        style={styles.actions}
-        contentContainerStyle={styles.actionsInner}
-      >
-        <AppButton onPress={onGrant} variant="outline">
-          Grant SMS Permission
-        </AppButton>
-        <AppButton onPress={onRead} disabled={!canRead || loading}>
-          {loading ? "Reading…" : "Read Last 50 SMS"}
-        </AppButton>
-        <AppButton onPress={onReadAll} disabled={!canRead || loading}>
-          {loading ? "Reading…" : "Fetch All SMS"}
-        </AppButton>
-        <AppButton onPress={onReadSince} disabled={!canRead || loading}>
-          {loading ? "Reading…" : "SMS since 01-12-2025"}
-        </AppButton>
-        <AppButton
-          onPress={onToggleListen}
-          disabled={!canRead}
-          variant={listening ? "outline" : undefined}
-        >
-          {listening ? "Stop Listening" : "Start Live Listener"}
-        </AppButton>
-
-        <AppText variant="caption" style={styles.sectionLabel}>
-          Simulate SMS
-        </AppText>
-        <AppButton onPress={onFakeFinancial} variant="outline">
-          Fake Financial SMS
-        </AppButton>
-        <AppButton onPress={onFakeOtp} variant="outline">
-          Fake OTP SMS
-        </AppButton>
-        <AppButton onPress={onFakePromo} variant="outline">
-          Fake Promo SMS
-        </AppButton>
-        <AppButton onPress={onFakeDelayed} variant="outline">
-          Fake SMS in 60s (background test)
-        </AppButton>
-
-        <AppText variant="caption" style={styles.sectionLabel}>
-          Background Queue
-          {pendingCount !== null ? `  •  ${pendingCount} pending` : ""}
-        </AppText>
-        <AppButton onPress={onCheckQueue} variant="outline">
-          Check Queue
-        </AppButton>
-        <AppButton onPress={onClearQueue} variant="outline">
-          Clear Queue
-        </AppButton>
-      </ScrollView>
-
-      {error ? (
-        <View style={styles.errorBox}>
-          <AppText variant="caption" style={styles.errorText}>
-            {error}
-          </AppText>
-        </View>
-      ) : null}
-
-      {loading ? (
-        <View style={styles.empty}>
-          <ActivityIndicator />
-        </View>
-      ) : (
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <SmsCard item={item} />}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <AppText variant="caption" style={styles.emptyText}>
-                {permission !== "granted"
-                  ? "SMS permission required"
-                  : "No messages found"}
-              </AppText>
-            </View>
-          }
-        />
-      )}
-    </SafeAreaView>
+    <SmsContext.Provider
+      value={{
+        permission,
+        loading,
+        listening,
+        error,
+        messages,
+        pendingCount,
+        onGrant,
+        onRead,
+        onReadAll,
+        onReadSince,
+        onToggleListen,
+        onFakeFinancial,
+        onFakeOtp,
+        onFakePromo,
+        onFakeDelayed,
+        onCheckQueue,
+        onClearQueue,
+        onClearDb,
+      }}
+    >
+      {children}
+    </SmsContext.Provider>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f9fafb" },
-  header: { padding: 16, gap: 8 },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  clearDbBtn: { paddingHorizontal: 10, paddingVertical: 4 },
-  actions: { maxHeight: 260, paddingHorizontal: 16 },
-  actionsInner: { gap: 8 },
-  errorBox: {
-    margin: 16,
-    padding: 12,
-    backgroundColor: "#fee2e2",
-    borderRadius: 8,
-  },
-  errorText: { color: "#991b1b" },
-  countText: { color: "#6b7280" },
-  sectionLabel: { color: "#9ca3af", marginTop: 4 },
-  list: { padding: 16, paddingTop: 12, flexGrow: 1 },
-  empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-  },
-  emptyText: { color: "#6b7280" },
-});
