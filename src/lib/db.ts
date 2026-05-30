@@ -53,4 +53,11 @@ async function _runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     await db.execAsync("ALTER TABLE transactions ADD COLUMN account_id INTEGER REFERENCES accounts(id);");
     await db.execAsync("PRAGMA user_version = 2;");
   }
+
+  if (version < 3) {
+    await db.execAsync("ALTER TABLE transactions ADD COLUMN source_type TEXT;");
+    await db.execAsync("ALTER TABLE transactions ADD COLUMN confidence TEXT;");
+    await db.execAsync("ALTER TABLE transactions ADD COLUMN status TEXT DEFAULT 'active';");
+    await db.execAsync("PRAGMA user_version = 3;");
+  }
 }

@@ -14,6 +14,9 @@ export type Transaction = {
   category: string;
   amount: number | null;
   merchant: string | null;
+  sourceType: string;
+  confidence: string;
+  status: string;
 };
 
 function djb2(s: string): string {
@@ -34,14 +37,15 @@ export async function saveTransaction(
   accounts: Account[] = [],
 ): Promise<void> {
   const parsed = parseTransactionSms(msg.body, msg.sender);
-  if (parsed.category === "otp") return;
+  if (parsed.sourceType === "OTP" || parsed.sourceType === "SYSTEM") return;
   const db = await getDb();
   const hash = messageHash(msg.sender, msg.body);
   const result = await db.runAsync(
     `INSERT OR IGNORE INTO transactions
        (sms_id, message_hash, amount, merchant, card_last4, upi_ref,
-        category, transaction_type, timestamp, sender, raw_sms)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        category, transaction_type, timestamp, sender, raw_sms,
+        source_type, confidence, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     smsId,
     hash,
     parsed.amount ?? null,
@@ -53,6 +57,9 @@ export async function saveTransaction(
     msg.timestamp,
     msg.sender,
     msg.body,
+    parsed.sourceType,
+    parsed.confidence,
+    "active",
   );
   if (result.changes > 0 && accounts.length > 0) {
     const accountId = matchAccount(accounts, parsed.cardLast4, parsed.upiRef, msg.body);
@@ -110,6 +117,9 @@ type TransactionRow = {
   amount: number | null;
   merchant: string | null;
   account_id: number | null;
+  source_type: string | null;
+  confidence: string | null;
+  status: string | null;
 };
 
 export async function unlinkTransactionsForAccount(accountId: number): Promise<void> {
@@ -125,7 +135,7 @@ export async function clearAllTransactions(): Promise<void> {
 export async function loadTransactions(): Promise<Transaction[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<TransactionRow>(
-    "SELECT sms_id, message_hash, sender, raw_sms, timestamp, transaction_type, category, amount, merchant, account_id FROM transactions ORDER BY timestamp DESC",
+    "SELECT sms_id, message_hash, sender, raw_sms, timestamp, transaction_type, category, amount, merchant, account_id, source_type, confidence, status FROM transactions ORDER BY timestamp DESC",
   );
   return rows.map((row) => ({
     id: row.sms_id ?? row.message_hash,
@@ -137,5 +147,8 @@ export async function loadTransactions(): Promise<Transaction[]> {
     category: row.category ?? "unknown",
     amount: row.amount ?? null,
     merchant: row.merchant ?? null,
+    sourceType: row.source_type ?? "BANK",
+    confidence: row.confidence ?? "HIGH",
+    status: row.status ?? "active",
   }));
 }

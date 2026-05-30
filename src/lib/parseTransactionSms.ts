@@ -9,9 +9,14 @@ export type TransactionType =
   | "otp"
   | "unknown";
 
+export type SourceType = "BANK" | "CARD" | "UPI" | "MERCHANT" | "OTP" | "SYSTEM";
+export type Confidence = "HIGH" | "MEDIUM" | "LOW" | "NONE";
+
 export type ParsedTransactionSms = {
   category: SmsCategory;
   transactionType: TransactionType;
+  sourceType: SourceType;
+  confidence: Confidence;
   amount?: number;
   merchant?: string;
   cardLast4?: string;
@@ -99,6 +104,13 @@ function extractSenderId(address: string): string {
   return match ? match[1].toUpperCase() : "";
 }
 
+const UPI_SENDER_RE = /PHONEPE|PPESMS|PHPEBN|PAYTM|PYTMBN|PYTMSM|GPAY|GOOGPY|AMZNPY|AMZPAY|BHIM|BHIMUPI|FREECH|FREECHARGE|MOBIKWIK|AIRPAY/i;
+
+function isUpiSender(address: string): boolean {
+  const id = extractSenderId(address);
+  return id.length > 0 && UPI_SENDER_RE.test(id);
+}
+
 function isBankSender(address: string): boolean {
   const id = extractSenderId(address);
   if (!id) return false;
@@ -176,6 +188,27 @@ function classifyCategory(sender: string, body: string): SmsCategory {
   return "unknown";
 }
 
+// ─── Source type + confidence ─────────────────────────────────────────────────
+
+function classifySourceType(
+  sender: string,
+  category: SmsCategory,
+  cardLast4: string | undefined,
+): SourceType {
+  if (category === "otp") return "OTP";
+  if (category !== "financial") return "SYSTEM";
+  if (isUpiSender(sender)) return "UPI";
+  if (isBankSender(sender)) return cardLast4 ? "CARD" : "BANK";
+  return "MERCHANT";
+}
+
+function classifyConfidence(sourceType: SourceType, transactionType: TransactionType): Confidence {
+  if (sourceType === "OTP" || sourceType === "SYSTEM") return "NONE";
+  if (sourceType === "MERCHANT") return "LOW";
+  if (transactionType === "debit" || transactionType === "credit" || transactionType === "refund" || transactionType === "payment") return "HIGH";
+  return "MEDIUM"; // statement, unknown from a bank/upi sender
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function parseTransactionSms(
@@ -184,24 +217,30 @@ export function parseTransactionSms(
 ): ParsedTransactionSms {
   const category = classifyCategory(sender, message);
   const transactionType = classifyTransactionType(message, category);
-  const result: ParsedTransactionSms = { category, transactionType };
 
-  if (!message) return result;
+  if (!message) {
+    const sourceType = classifySourceType(sender, category, undefined);
+    return { category, transactionType, sourceType, confidence: classifyConfidence(sourceType, transactionType) };
+  }
 
   const amountMatch = message.match(AMOUNT_RE);
+  let amount: number | undefined;
   if (amountMatch) {
     const n = Number(amountMatch[1].replace(/,/g, ""));
-    if (!Number.isNaN(n)) result.amount = n;
+    if (!Number.isNaN(n)) amount = n;
   }
 
   const cardMatch = message.match(CARD_RE);
-  if (cardMatch) result.cardLast4 = cardMatch[1];
+  const cardLast4 = cardMatch ? cardMatch[1] : undefined;
 
   const merchantMatch = message.match(MERCHANT_RE);
-  if (merchantMatch) result.merchant = merchantMatch[1].trim();
+  const merchant = merchantMatch ? merchantMatch[1].trim() : undefined;
 
   const upiMatch = message.match(UPI_REF_RE);
-  if (upiMatch) result.upiRef = upiMatch[1];
+  const upiRef = upiMatch ? upiMatch[1] : undefined;
 
-  return result;
+  const sourceType = classifySourceType(sender, category, cardLast4);
+  const confidence = classifyConfidence(sourceType, transactionType);
+
+  return { category, transactionType, sourceType, confidence, amount, cardLast4, merchant, upiRef };
 }
