@@ -2,7 +2,7 @@ import AppText from "@mobile/components/ui/text";
 import type { Transaction } from "@mobile/lib/transactions";
 import * as Clipboard from "expo-clipboard";
 import { memo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, ToastAndroid, View } from "react-native";
 
 type Props = { item: Transaction; accountName?: string };
 
