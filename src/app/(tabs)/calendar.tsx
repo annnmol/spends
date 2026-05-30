@@ -1,5 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, useWindowDimensions } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import CalendarGrid from "@mobile/components/calendar/CalendarGrid";
@@ -11,9 +16,8 @@ import { useTheme } from "@mobile/lib/theme";
 import { useAccountsStore } from "@mobile/store/slices/accounts";
 import { useSmsStore } from "@mobile/store/slices/sms";
 
-// 16px padding each side + 6 gaps of 4pt between 7 cells
-const GRID_H_PAD = 32;
-const CELL_GAP = 4;
+const GRID_H_PAD = 32; // 16px left + 16px right
+const CELL_GAP = 4;    // gap between 7 cells (6 gaps total)
 
 export default function CalendarScreen() {
   const { theme } = useTheme();
@@ -29,6 +33,15 @@ export default function CalendarScreen() {
   );
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
+  // Defer heavy grid render until navigation animation completes.
+  // This is what eliminates the perceived 3-5s lag — the tab opens instantly
+  // showing the header + navigator, then the grid appears after the animation.
+  const [gridReady, setGridReady] = useState(false);
+  useEffect(() => {
+    const id = requestIdleCallback(() => setGridReady(true));
+    return () => cancelIdleCallback(id);
+  }, []);
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -37,6 +50,14 @@ export default function CalendarScreen() {
     accounts,
     year,
     month,
+  );
+
+  // Descending order for the list — useMemo avoids the .reverse() mutation bug
+  // (Array.reverse() is in-place; calling it directly on a memo value corrupts
+  // the cached reference used by CalendarGrid's byDay map).
+  const monthTxnsDesc = useMemo(
+    () => [...monthTxns].reverse(),
+    [monthTxns],
   );
 
   const cellSize = Math.floor((width - GRID_H_PAD - CELL_GAP * 6) / 7);
@@ -51,7 +72,6 @@ export default function CalendarScreen() {
     setSelectedDate(null);
   }, []);
 
-  // Tap same date again → deselect (show full month)
   const handleSelectDay = useCallback((date: Date) => {
     setSelectedDate((prev) =>
       prev?.getTime() === date.getTime() ? null : date,
@@ -76,22 +96,35 @@ export default function CalendarScreen() {
           onNext={handleNext}
         />
 
-        <CalendarGrid
-          year={year}
-          month={month}
-          byDay={byDay}
-          accountMap={accountMap}
-          selectedDate={selectedDate}
-          today={today}
-          onSelectDay={handleSelectDay}
-          cellSize={cellSize}
-        />
+        {gridReady ? (
+          <>
+            <CalendarGrid
+              year={year}
+              month={month}
+              byDay={byDay}
+              accountMap={accountMap}
+              selectedDate={selectedDate}
+              today={today}
+              onSelectDay={handleSelectDay}
+              cellSize={cellSize}
+            />
 
-        <MonthlyEventsList
-          monthTxns={monthTxns.reverse()}
-          accountMap={accountMap}
-          selectedDate={selectedDate}
-        />
+            <MonthlyEventsList
+              monthTxns={monthTxnsDesc}
+              accountMap={accountMap}
+              selectedDate={selectedDate}
+            />
+          </>
+        ) : (
+          // Skeleton placeholder — same height as the grid so the layout
+          // doesn't jump when the content loads
+          <View
+            style={[
+              styles.skeleton,
+              { backgroundColor: theme.surfaceSecondary },
+            ]}
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -106,5 +139,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
+  },
+  skeleton: {
+    marginHorizontal: 16,
+    borderRadius: 12,
+    height: 320,
+    marginTop: 8,
   },
 });
