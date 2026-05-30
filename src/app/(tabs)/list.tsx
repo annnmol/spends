@@ -3,10 +3,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import SmsCard from "@mobile/components/sms/SmsCard";
 import AppText from "@mobile/components/ui/text";
-import { useSms } from "@mobile/store/context/sms-context";
+import { useSmsStore } from "@mobile/store/slices/sms";
 
 export default function ListScreen() {
-  const { messages, loading, permission } = useSms();
+  const messages = useSmsStore((s) => s.messages);
+  const loading = useSmsStore((s) => s.loading);
+  const permission = useSmsStore((s) => s.permission);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>

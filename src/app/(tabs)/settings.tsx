@@ -3,12 +3,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppButton from "@mobile/components/ui/button";
 import AppText from "@mobile/components/ui/text";
-import { useSms } from "@mobile/store/context/sms-context";
+import { useAccountsStore } from "@mobile/store/slices/accounts";
+import { useSmsStore } from "@mobile/store/slices/sms";
 
 export default function SettingsScreen() {
-  const { listening, onToggleListen, onClearDb, permission } = useSms();
+  const listening = useSmsStore((s) => s.listening);
+  const permission = useSmsStore((s) => s.permission);
 
   const canRead = permission === "granted";
+
+  async function handleClearAll() {
+    await useSmsStore.getState().clearTransactions();
+    await useAccountsStore.getState().clearAccounts();
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -21,7 +28,7 @@ export default function SettingsScreen() {
           Listener
         </AppText>
         <AppButton
-          onPress={onToggleListen}
+          onPress={() => useSmsStore.getState().toggleListening()}
           disabled={!canRead}
           variant={listening ? "outline" : undefined}
         >
@@ -31,8 +38,8 @@ export default function SettingsScreen() {
         <AppText variant="caption" style={styles.section}>
           Database
         </AppText>
-        <AppButton onPress={onClearDb} variant="outline">
-          Clear All Transactions (DB)
+        <AppButton onPress={handleClearAll} variant="outline">
+          Clear All Data (Transactions + Accounts)
         </AppButton>
       </View>
     </SafeAreaView>

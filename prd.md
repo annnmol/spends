@@ -278,27 +278,365 @@ Status: Pending
 
 ---
 
-# Card Management
+# Account Management
 
-## Step 8: Create Cards
+# Step8: Account Management & Transaction Linking
+
+## Goal
+
+Create a flexible account system that is not limited to credit cards.
+
+An Account can represent:
+
+- Credit Card
+- Debit Card
+- Bank Account
+- UPI Account
+- Wallet
+- Other Financial Source
+
+All future transactions, statements, reminders, analytics, and calendar events will be linked to an Account.
+
+---
+
+### Account Model
+
+### accounts
+
+Fields:
+
+- id
+- name
+- type
+- bankName
+- last4Digits
+- slugs
+- billingDate
+- dueDate
+- icon
+- color
+- notes
+- createdAt
+- updatedAt
+
+---
+
+### Supported Account Types
+
+- credit_card
+- debit_card
+- bank_account
+- upi
+- wallet
+- other
+
+---
+
+### Example Accounts
+
+### Credit Card
+
+Name:
+
+HDFC Swiggy
+
+Type:
+
+credit_card
+
+Last 4:
+
+5678
+
+Slugs:
+
+- 5678
+- HDFC
+- SWIGGY
+
+Billing Date:
+
+12
+
+Due Date:
+
+3
+
+---
+
+### Bank Account
+
+Name:
+
+ICICI Salary
+
+Type:
+
+bank_account
+
+Last 4:
+
+1234
+
+Slugs:
+
+- 1234
+- ICICI
+
+---
+
+### UPI Account
+
+Name:
+
+Personal UPI
+
+Type:
+
+upi
+
+Slugs:
+
+- anmol@oksbi
+- OKSBI
+
+---
+
+### Account Creation
+
+### Option 1: Manual Creation
+
+User can:
+
+- Create Account
+- Edit Account
+- Delete Account
+
+Fields:
+
+- Name
+- Type
+- Bank Name
+- Last 4 Digits
+- Slugs
+- Billing Date
+- Due Date
+
+---
+
+### Option 2: Auto Detection From SMS
+
+Button:
+
+Scan Accounts From SMS
+
+Flow:
+
+Read Financial SMS
+↓
+Extract Last 4 Digits
+↓
+Extract Sender
+↓
+Extract UPI IDs
+↓
+Detect Repeated Patterns
+↓
+Suggest Accounts
+
+Example:
+
+Detected:
+
+- HDFC xxxx5678
+- ICICI xxxx1234
+- SBI xxxx9876
+
+User selects:
+
+Import
+
+Accounts are automatically created.
+
+---
+
+### Account Matching Strategy
+
+Transactions are linked to Accounts using:
+
+### Priority 1
+
+Last 4 Digits
+
+Example:
+
+SMS:
+
+Card xx5678 spent ₹499
+
+Match:
+
+Account last4Digits = 5678
+
+---
+
+### Priority 2
+
+UPI ID
+
+Example:
+
+UPI payment from anmol@oksbi
+
+Match:
+
+Account slug = anmol@oksbi
+
+---
+
+### Priority 3
+
+Custom Slugs
+
+Example:
+
+SMS contains:
+
+SWIGGY
+
+Match:
+
+Account slug = SWIGGY
+
+---
+
+### Auto Save New SMS
+
+Flow:
+
+SMS Arrives
+↓
+BroadcastReceiver
+↓
+Parse Financial SMS
+↓
+Classify Transaction Type
+↓
+Identify Account
+↓
+Save To SQLite
+↓
+Link To Account
+↓
+Notify React Native
+
+No manual import required.
+
+---
+
+### Transaction Types
+
+Every financial SMS should be classified as:
+
+- DEBIT
+- CREDIT
+- REFUND
+- PAYMENT
+- STATEMENT
+- OTP
+- UNKNOWN
 
 Examples:
 
-- HDFC Swiggy xxxx5678
-- Axis Ace xxxx1234
-- ICICI Amazon xxxx9012
+spent
+debited
+withdrawn
 
-Features:
+→ DEBIT
 
-- Add Card
-- Edit Card
-- Delete Card
+credited
+salary
+
+→ CREDIT
+
+refunded
+reversed
+
+→ REFUND
+
+statement generated
+
+→ STATEMENT
+
+payment received
+
+→ PAYMENT
+
+otp
+
+→ OTP
+
+---
+
+### Deduplication
+
+Every SMS is stored using:
+
+Android SMS `_id`
+
+Database Constraint:
+
+sms_id UNIQUE
+
+Insert Strategy:
+
+INSERT OR IGNORE
+
+This prevents:
+
+- Duplicate imports
+- Duplicate startup syncs
+- Duplicate realtime saves
+
+---
+
+### Permanent Transaction Rule
+
+SMS is the import source.
+
+SQLite is the source of truth.
+
+If a user deletes the original SMS:
+
+- Transaction remains
+- Analytics remain
+- Calendar history remains
+- Statements remain
+
+Deleting an SMS must never delete a financial transaction.
+
+---
+
+### Success Criteria
+
+User can:
+
+- Create Accounts
+- Edit Accounts
+- Delete Accounts
+- Scan Accounts From SMS
+- Receive New SMS
+- Auto Detect Account
+- Auto Classify Transaction
+- Auto Save Transaction
+- Avoid Duplicates
+- Retain History Even If SMS Is Deleted
 
 Status: Pending
 
 ---
 
-## Step 9: Auto Match SMS To Card
+## Step 9: Auto Match SMS To Accounts
 
 Example:
 
@@ -314,7 +652,7 @@ HDFC Swiggy
 Last 4: 5678
 ```
 
-Transaction becomes linked to the card.
+Transaction becomes linked to the account.
 
 Status: Pending
 
@@ -402,6 +740,9 @@ Import Missing Entries
 Prevents missing transactions.
 
 Status: Pending
+
+IMPORTANT: The one thing that will need revisiting as the app grows is Step 12 (App Closed Support) — when a BroadcastReceiver writes to SQLite while the app
+is killed, Zustand in-memory state won't reflect it. The fix is the startup sync (Step 13) which re-hydrates the store from SQLite on next open.
 
 ---
 

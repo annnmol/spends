@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 //custom import
 import productConfig from "@root/src/lib/product";
-import { zustandStorage } from "@root/src/store/storage-mmkv";
+import { secureStorage } from "@root/src/store/storage-secure";
 
 const STORAGE_KEY = `${productConfig.identifier}-system`;
 
@@ -30,7 +30,7 @@ export const useSystemStore = create(
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() => zustandStorage),
+      storage: createJSONStorage(() => secureStorage),
       partialize: (state: StoreState) => ({
         colorScheme: state.colorScheme,
       }),

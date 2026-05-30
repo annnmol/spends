@@ -1,5 +1,7 @@
 import type { SmsMessage } from "../../modules/sms-module";
+import type { Account } from "./accounts";
 import { getDb } from "./db";
+import { matchAccount } from "./matchAccount";
 import { parseTransactionSms } from "./parseTransactionSms";
 
 function djb2(s: string): string {
@@ -17,12 +19,13 @@ function messageHash(sender: string, body: string): string {
 export async function saveTransaction(
   msg: SmsMessage,
   smsId: string | null,
+  accounts: Account[] = [],
 ): Promise<void> {
   const parsed = parseTransactionSms(msg.body, msg.sender);
-  if (parsed.category === "otp") return; // OTP messages never create transactions
+  if (parsed.category === "otp") return;
   const db = await getDb();
   const hash = messageHash(msg.sender, msg.body);
-  await db.runAsync(
+  const result = await db.runAsync(
     `INSERT OR IGNORE INTO transactions
        (sms_id, message_hash, amount, merchant, card_last4, upi_ref,
         category, transaction_type, timestamp, sender, raw_sms)
@@ -39,14 +42,48 @@ export async function saveTransaction(
     msg.sender,
     msg.body,
   );
+  if (result.changes > 0 && accounts.length > 0) {
+    const accountId = matchAccount(accounts, parsed.cardLast4, parsed.upiRef, msg.body);
+    if (accountId !== null) {
+      await db.runAsync(
+        "UPDATE transactions SET account_id = ? WHERE id = ?",
+        accountId,
+        result.lastInsertRowId,
+      );
+    }
+  }
+}
+
+export async function linkAllUnlinkedTransactions(accounts: Account[]): Promise<void> {
+  if (accounts.length === 0) return;
+  const db = await getDb();
+  const rows = await db.getAllAsync<{
+    id: number;
+    card_last4: string | null;
+    upi_ref: string | null;
+    raw_sms: string;
+  }>(
+    "SELECT id, card_last4, upi_ref, raw_sms FROM transactions WHERE account_id IS NULL AND category = 'financial'",
+  );
+  for (const row of rows) {
+    const accountId = matchAccount(accounts, row.card_last4, row.upi_ref, row.raw_sms);
+    if (accountId !== null) {
+      await db.runAsync(
+        "UPDATE transactions SET account_id = ? WHERE id = ?",
+        accountId,
+        row.id,
+      );
+    }
+  }
 }
 
 export async function saveTransactions(
   msgs: SmsMessage[],
   useInboxId: boolean,
+  accounts: Account[] = [],
 ): Promise<void> {
   await Promise.all(
-    msgs.map((msg) => saveTransaction(msg, useInboxId ? msg.id : null)),
+    msgs.map((msg) => saveTransaction(msg, useInboxId ? msg.id : null, accounts)),
   );
 }
 

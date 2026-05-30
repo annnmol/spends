@@ -20,6 +20,21 @@ export async function getDb(): Promise<SQLite.SQLiteDatabase> {
       sender          TEXT NOT NULL,
       raw_sms         TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS accounts (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      name         TEXT NOT NULL,
+      type         TEXT NOT NULL DEFAULT 'other',
+      bank_name    TEXT,
+      last4        TEXT,
+      slugs        TEXT NOT NULL DEFAULT '[]',
+      billing_date INTEGER,
+      due_date     INTEGER,
+      icon         TEXT,
+      color        TEXT,
+      notes        TEXT,
+      created_at   INTEGER NOT NULL,
+      updated_at   INTEGER NOT NULL
+    );
   `);
   await _runMigrations(_db);
   return _db;
@@ -30,8 +45,12 @@ async function _runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   const version = row?.user_version ?? 0;
 
   if (version < 1) {
-    // v1: add transaction_type column
     await db.execAsync("ALTER TABLE transactions ADD COLUMN transaction_type TEXT;");
     await db.execAsync("PRAGMA user_version = 1;");
+  }
+
+  if (version < 2) {
+    await db.execAsync("ALTER TABLE transactions ADD COLUMN account_id INTEGER REFERENCES accounts(id);");
+    await db.execAsync("PRAGMA user_version = 2;");
   }
 }

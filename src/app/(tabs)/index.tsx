@@ -4,58 +4,46 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import PermissionStatus from "@mobile/components/sms/PermissionStatus";
 import AppButton from "@mobile/components/ui/button";
 import AppText from "@mobile/components/ui/text";
-import { useSms } from "@mobile/store/context/sms-context";
+import { useSmsStore } from "@mobile/store/slices/sms";
 
 export default function HomeScreen() {
-  const {
-    permission,
-    loading,
-    listening,
-    error,
-    messages,
-    pendingCount,
-    onGrant,
-    onRead,
-    onReadAll,
-    onReadSince,
-    onToggleListen,
-    onFakeFinancial,
-    onFakeOtp,
-    onFakePromo,
-    onFakeDelayed,
-    onCheckQueue,
-    onClearQueue,
-  } = useSms();
+  const permission = useSmsStore((s) => s.permission);
+  const loading = useSmsStore((s) => s.loading);
+  const listening = useSmsStore((s) => s.listening);
+  const error = useSmsStore((s) => s.error);
+  const messageCount = useSmsStore((s) => s.messages.length);
+  const pendingCount = useSmsStore((s) => s.pendingCount);
 
   const canRead = permission === "granted";
+  const store = useSmsStore.getState;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <AppText variant="title">SMS Finance Tracker</AppText>
         <PermissionStatus state={permission} />
-        {messages.length > 0 && (
+        {messageCount > 0 && (
           <AppText variant="caption" style={styles.dim}>
-            {messages.length} messages loaded{listening ? "  •  live" : ""}
+            {messageCount} messages loaded{listening ? "  •  live" : ""}
           </AppText>
         )}
       </View>
 
       <ScrollView contentContainerStyle={styles.inner}>
-        <AppButton onPress={onGrant} variant="outline">
+        <AppButton onPress={() => store().grantPermission()} variant="outline">
           Grant SMS Permission
         </AppButton>
-        <AppButton onPress={onRead} disabled={!canRead || loading}>
+        <AppButton onPress={() => store().readRecent()} disabled={!canRead || loading}>
           {loading ? "Reading…" : "Read Last 50 SMS"}
         </AppButton>
-        <AppButton onPress={onReadAll} disabled={!canRead || loading}>
+        <AppButton onPress={() => store().readAll()} disabled={!canRead || loading}>
           {loading ? "Reading…" : "Fetch All SMS"}
         </AppButton>
-        <AppButton onPress={onReadSince} disabled={!canRead || loading}>
+        <AppButton onPress={() => store().readSince()} disabled={!canRead || loading}>
           {loading ? "Reading…" : "SMS since 01-12-2025"}
         </AppButton>
         <AppButton
-          onPress={onToggleListen}
+          onPress={() => store().toggleListening()}
           disabled={!canRead}
           variant={listening ? "outline" : undefined}
         >
@@ -65,16 +53,16 @@ export default function HomeScreen() {
         <AppText variant="caption" style={styles.section}>
           Simulate SMS
         </AppText>
-        <AppButton onPress={onFakeFinancial} variant="outline">
+        <AppButton onPress={() => store().fakeFinancial()} variant="outline">
           Fake Financial SMS
         </AppButton>
-        <AppButton onPress={onFakeOtp} variant="outline">
+        <AppButton onPress={() => store().fakeOtp()} variant="outline">
           Fake OTP SMS
         </AppButton>
-        <AppButton onPress={onFakePromo} variant="outline">
+        <AppButton onPress={() => store().fakePromo()} variant="outline">
           Fake Promo SMS
         </AppButton>
-        <AppButton onPress={onFakeDelayed} variant="outline">
+        <AppButton onPress={() => store().fakeDelayed()} variant="outline">
           Fake SMS in 20s (background test)
         </AppButton>
 
@@ -82,10 +70,10 @@ export default function HomeScreen() {
           Background Queue
           {pendingCount !== null ? `  •  ${pendingCount} pending` : ""}
         </AppText>
-        <AppButton onPress={onCheckQueue} variant="outline">
+        <AppButton onPress={() => store().checkQueue()} variant="outline">
           Check Queue
         </AppButton>
-        <AppButton onPress={onClearQueue} variant="outline">
+        <AppButton onPress={() => store().clearQueue()} variant="outline">
           Clear Queue
         </AppButton>
       </ScrollView>

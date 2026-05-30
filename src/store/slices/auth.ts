@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 //custom imports
 import productConfig from "@root/src/lib/product";
-import { zustandStorage } from "@root/src/store/storage-mmkv";
+import { secureStorage } from "@root/src/store/storage-secure";
 
 export const STORAGE_KEY = `${productConfig.identifier}-auth`;
 
@@ -57,7 +57,7 @@ export const useAuthStore = create(
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() => zustandStorage),
+      storage: createJSONStorage(() => secureStorage),
       partialize: (state: StoreState) => ({
         authSession: state.authSession,
         authToken: state.authToken,
