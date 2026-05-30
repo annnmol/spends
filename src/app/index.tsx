@@ -10,7 +10,7 @@ export default function Index() {
         Hello World
       </AppText>
       <AppText variant="defaultSemiBold" style={{ marginTop: 10 }}>
-        Welcome to Expo Router with TypeScript and Tailwind CSS!
+        Welcome to Expo Router with TypeScript!
       </AppText>
       <AppButton variant="outline">ddd</AppButton>
     </View>
