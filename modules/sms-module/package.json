@@ -1,0 +1,7 @@
+{
+  "name": "sms-module",
+  "version": "0.1.0",
+  "description": "Local Expo Module for reading Android SMS inbox via ContentResolver",
+  "main": "index.ts",
+  "private": true
+}

@@ -17,7 +17,12 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECEIVE_SMS",
+        "android.permission.READ_SMS"
+      ],
+      "package": "com.anmoltanwar.spends"
     },
     "web": {
       "output": "static",
@@ -39,6 +44,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "49a70c59-f78a-415f-88f7-54e0ea3ee719"
+      }
     }
   }
 }
