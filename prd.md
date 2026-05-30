@@ -658,6 +658,457 @@ Status: Pending
 
 ---
 
+# Step 9.5: Transaction Classification & Review Layer
+
+## Goal
+
+Not every financial-looking SMS should become a transaction.
+
+The system must classify SMS messages, determine confidence, identify the source, and decide whether a transaction should be created.
+
+This prevents:
+
+- Duplicate transaction creation
+- Merchant notification noise
+- OTP pollution
+- Promotional SMS contamination
+- Incorrect analytics
+
+---
+
+## Transaction Classification Pipeline
+
+Flow:
+
+SMS
+↓
+Parse
+↓
+Identify Source Type
+↓
+Identify Transaction Type
+↓
+Calculate Confidence
+↓
+Determine Status
+↓
+Save Transaction
+↓
+Link To Account
+
+---
+
+## Source Type
+
+Represents where the SMS originated from.
+
+### Supported Values
+
+- BANK
+- CARD
+- UPI
+- MERCHANT
+- OTP
+- SYSTEM
+
+### Examples
+
+BANK
+
+Examples:
+
+- SBI
+- HDFC Bank
+- ICICI Bank
+
+CARD
+
+Examples:
+
+- Credit Card SMS
+- Debit Card SMS
+
+UPI
+
+Examples:
+
+- UPI payment notifications
+- UPI transfer confirmations
+
+MERCHANT
+
+Examples:
+
+- Samsung
+- Amazon
+- Swiggy
+- Zomato
+
+OTP
+
+Examples:
+
+- OTP messages
+- Verification messages
+
+SYSTEM
+
+Examples:
+
+- Welcome messages
+- Recharge confirmations
+- Informational notifications
+
+---
+
+## Transaction Type
+
+Represents the financial action.
+
+### Supported Values
+
+- DEBIT
+- CREDIT
+- REFUND
+- PAYMENT
+- STATEMENT
+- OTP
+- UNKNOWN
+
+### Examples
+
+DEBIT
+
+Keywords:
+
+- spent
+- debited
+- withdrawn
+- purchase
+
+CREDIT
+
+Keywords:
+
+- credited
+- salary
+- deposit received
+
+REFUND
+
+Keywords:
+
+- refunded
+- reversed
+- returned
+
+PAYMENT
+
+Keywords:
+
+- payment received
+- payment credited
+
+STATEMENT
+
+Keywords:
+
+- statement generated
+- minimum due
+- total due
+
+OTP
+
+Keywords:
+
+- otp
+- one time password
+
+UNKNOWN
+
+Unable to classify.
+
+---
+
+## Confidence Level
+
+Represents how certain the system is that the SMS represents a valid financial transaction.
+
+### Supported Values
+
+- HIGH
+- MEDIUM
+- LOW
+- NONE
+
+### HIGH
+
+Examples:
+
+- Card spent SMS
+- Bank debit SMS
+- UPI success SMS
+
+Action:
+
+Automatically create transaction.
+
+---
+
+### MEDIUM
+
+Examples:
+
+- Payment received notifications
+- Partial transaction confirmations
+
+Action:
+
+Create transaction but mark for future review.
+
+---
+
+### LOW
+
+Examples:
+
+- Merchant acknowledgements
+- Invoice notifications
+- Service center updates
+
+Action:
+
+Do not include in analytics.
+
+---
+
+### NONE
+
+Examples:
+
+- OTP
+- Promotional SMS
+
+Action:
+
+Ignore.
+
+---
+
+## Transaction Status
+
+Represents the lifecycle state of a transaction.
+
+### Supported Values
+
+- ACTIVE
+- ARCHIVED
+- DUPLICATE
+- IGNORED
+
+### ACTIVE
+
+Default state.
+
+Included in:
+
+- Dashboard
+- Analytics
+- Calendar
+- Insights
+
+---
+
+### ARCHIVED
+
+User manually hides transaction.
+
+Not included in:
+
+- Dashboard
+- Analytics
+- Calendar
+
+Still stored in database.
+
+---
+
+### DUPLICATE
+
+Transaction identified as a duplicate of another transaction.
+
+Examples:
+
+SBI:
+
+₹11,000 debited
+
+Samsung:
+
+₹11,000 payment received
+
+The Samsung event may later be marked as DUPLICATE.
+
+Not included in analytics.
+
+---
+
+### IGNORED
+
+Examples:
+
+- OTP
+- Promotional messages
+- Non-financial events
+
+Stored for debugging if required.
+
+Excluded from all financial calculations.
+
+---
+
+## Transaction Creation Rules
+
+### Auto Create
+
+Create transaction automatically when:
+
+Source Type:
+
+- BANK
+- CARD
+- UPI
+
+AND
+
+Confidence:
+
+- HIGH
+- MEDIUM
+
+---
+
+### Ignore
+
+Ignore transaction creation when:
+
+Source Type:
+
+- OTP
+- SYSTEM
+
+OR
+
+Confidence:
+
+- NONE
+
+---
+
+### Review Later
+
+For:
+
+Source Type:
+
+- MERCHANT
+
+Create SMS event only.
+
+Do not immediately include in financial analytics.
+
+---
+
+## Future Duplicate Detection (PRD v2)
+
+Not required for MVP.
+
+Future logic may use:
+
+- Same Amount
+- Similar Timestamp
+- Same Account
+- Similar Merchant
+
+Example:
+
+SBI:
+
+₹11,000 debited
+
+Samsung:
+
+₹11,000 received
+
+System may group both records and mark one as DUPLICATE.
+
+---
+
+## Database Fields
+
+Add to Transaction model:
+
+- sourceType
+- confidence
+- status
+
+Example:
+
+sourceType = BANK
+
+confidence = HIGH
+
+status = ACTIVE
+
+---
+
+## Success Criteria
+
+The system can:
+
+- Distinguish BANK vs MERCHANT SMS
+- Distinguish DEBIT vs CREDIT vs REFUND
+- Ignore OTP messages
+- Ignore promotional messages
+- Create only meaningful financial transactions
+- Support future duplicate detection
+- Support future transaction archiving
+
+# Step 9.6 - Merchant & Service Detection
+
+Goal:
+
+Automatically identify merchants, apps, websites, and subscription services from SMS.
+
+Entities:
+
+- Merchant
+- Service
+- Subscription
+
+Examples:
+
+- Swiggy
+- Zomato
+- Amazon
+- Netflix
+- YouTube Premium
+- Uber
+- Ola
+
+Features:
+
+- Merchant Matching
+- Merchant Analytics
+- Spend By Merchant
+- Spend By Category
+- Subscription Detection
+- Recurring Payment Detection
+
+Future:
+
+Auto-detect subscriptions and show monthly recurring expenses.
+
 # Calendar UI
 
 ## Step 10: Monthly Calendar

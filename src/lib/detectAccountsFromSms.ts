@@ -11,25 +11,39 @@ export type DetectedAccount = CreateAccountInput & { txnCount: number };
 
 function guessBankName(sender: string): string | null {
   const id = sender.replace(/^[A-Z]{2}-/i, "").toUpperCase();
-  if (id.includes("HDFC")) return "HDFC Bank";
-  if (id.includes("ICICI")) return "ICICI Bank";
-  if (id.includes("AXIS")) return "Axis Bank";
-  if (id.includes("KOTAK")) return "Kotak Bank";
-  if (id.includes("SBII") || id.includes("SBIP") || id.includes("SBIC") || id.includes("SBIU")) return "State Bank of India";
-  if (id.includes("PNB")) return "Punjab National Bank";
-  if (id.includes("BOI") || id.includes("BOIS")) return "Bank of India";
-  if (id.includes("CANARA") || id.includes("CNR")) return "Canara Bank";
-  if (id.includes("UNION")) return "Union Bank";
-  if (id.includes("INDUS")) return "IndusInd Bank";
-  if (id.includes("IDFC")) return "IDFC First Bank";
-  if (id.includes("RBL")) return "RBL Bank";
-  if (id.includes("YES") && id.includes("BK")) return "Yes Bank";
-  if (id.includes("PAYTM") || id.includes("PYTM")) return "Paytm";
-  if (id.includes("PHONEPE") || id.includes("PPE")) return "PhonePe";
-  if (id.includes("GPAY") || id.includes("GOOGPY")) return "Google Pay";
-  if (id.includes("AMEX")) return "American Express";
-  if (id.includes("CITI")) return "Citibank";
-  if (id.includes("HSBC")) return "HSBC";
+  // Each entry: list of substrings that identify the bank in the sender ID
+  const BANKS: [string[], string][] = [
+    [["HDFCBK", "HDFCB", "HDFC"], "HDFC Bank"],
+    [["ICICIB", "ICICI"], "ICICI Bank"],
+    [["UTIBK", "AXISBK", "AXIS"], "Axis Bank"],
+    [["KOTAKB", "KOTAK"], "Kotak Bank"],
+    [["SBIINB", "SBIPSG", "SBISMS", "SBICRM", "SBINFO", "SBII", "SBIP", "SBIC", "SBIU", "SBMSBI"], "State Bank of India"],
+    [["PNBSMS", "PNB"], "Punjab National Bank"],
+    [["BOISMS", "BOISBI", "BOIS", "BOI"], "Bank of India"],
+    [["CANBK", "CANARA", "CNR"], "Canara Bank"],
+    [["UBIINB", "UBISMS", "UNION"], "Union Bank"],
+    [["INDBNK", "INDUSB", "INDUS"], "IndusInd Bank"],
+    [["IDFCFB", "IDFCB", "IDFC"], "IDFC First Bank"],
+    [["IDBIBK", "IDBIB", "IDBI"], "IDBI Bank"],
+    [["RBLBNK", "RBLBK", "RBL"], "RBL Bank"],
+    [["YESBNK", "YESBK", "YESB"], "Yes Bank"],
+    [["FEDBNK", "FEDBK", "FEDERAL"], "Federal Bank"],
+    [["SIBSMS", "SIBBNK", "SIB"], "South Indian Bank"],
+    [["KVBSMS", "KVBNK", "KVB"], "Karur Vysya Bank"],
+    [["BNDHNB", "BANDHAN"], "Bandhan Bank"],
+    [["PSBSMS", "PSBBNK"], "Punjab & Sind Bank"],
+    [["UCOBK", "UCOB"], "UCO Bank"],
+    [["AMEX"], "American Express"],
+    [["CITI"], "Citibank"],
+    [["HSBC"], "HSBC"],
+    [["PAYTM", "PYTM"], "Paytm"],
+    [["PHONEPE", "PHPE"], "PhonePe"],
+    [["GPAY", "GOOGPY"], "Google Pay"],
+    [["BHIM"], "BHIM UPI"],
+  ];
+  for (const [patterns, name] of BANKS) {
+    if (patterns.some((p) => id.includes(p))) return name;
+  }
   return null;
 }
 

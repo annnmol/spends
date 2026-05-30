@@ -1,6 +1,6 @@
-// import * as Clipboard from "expo-clipboard";
 import AppText from "@mobile/components/ui/text";
 import type { Transaction } from "@mobile/lib/transactions";
+import * as Clipboard from "expo-clipboard";
 import { memo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -45,8 +45,8 @@ const AMOUNT_PREFIX: Record<string, string> = {
 };
 
 async function copyBody(body: string) {
-  // await Clipboard.setStringAsync(body);
-  // ToastAndroid.show("SMS copied", ToastAndroid.SHORT);
+  await Clipboard.setStringAsync(body);
+  ToastAndroid.show("SMS copied", ToastAndroid.SHORT);
 }
 
 function SmsCardBase({ item, accountName }: Props) {
