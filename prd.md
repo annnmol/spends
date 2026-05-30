@@ -163,6 +163,35 @@ Success Criteria:
 
 Status: Pending
 
+Step 6.5 - Deduplication Layer
+
+Store Android SMS ID.
+
+Database Constraints:
+
+- sms_id UNIQUE
+- message_hash UNIQUE
+
+Use:
+INSERT OR IGNORE
+
+Goals:
+
+- Prevent duplicate imports
+- Prevent duplicate realtime saves
+- Prevent duplicate startup syncs
+- Safe repeated rescans
+
+Success Criteria:
+
+User can press:
+
+- Read Last 50 SMS
+- Read All SMS
+- Startup Sync
+
+100 times and database count remains correct.
+
 ---
 
 ## Step 7: Auto Save New SMS
