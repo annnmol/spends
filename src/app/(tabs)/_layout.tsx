@@ -35,6 +35,12 @@ const TAB_CONFIG: TabConfig[] = [
     iconOutline: "calendar-outline",
   },
   {
+    name: "insights",
+    title: "Insights",
+    icon: "analytics",
+    iconOutline: "analytics-outline",
+  },
+  {
     name: "settings",
     title: "Settings",
     icon: "settings",

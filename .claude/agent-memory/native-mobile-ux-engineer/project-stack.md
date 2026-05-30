@@ -24,6 +24,8 @@ This is a React Native + Expo SDK 56 app using Expo Router (file-based tabs at `
 
 **Home screen components:** Built at `src/components/home/` — HomeHeader, MonthlySummaryCard, AccountStats, MonthlyOverview, AccountStatusBadge, AccountCard, AccountList. All `memo()`-wrapped. AccountCard handles 5 account types (credit_card, debit_card, bank_account, upi/wallet, other) with conditional body rendering.
 
+**Insights screen components:** Built at `src/components/insights/` — InsightsHeader, SummaryCard, TimeRangeSelector, SpendingTrendChart, AccountSpendList, AccountSpendRow, MerchantSpendList, NetFlowCard. Screen at `src/app/(tabs)/insights.tsx`. Uses `react-native-gifted-charts` `LineChart` with `areaChart` + `curved` props for the spend trend. TimeRange type and `getRangeBounds()` util in `src/components/insights/types.ts`.
+
 **Styling convention:** `StyleSheet.create()` for all styles, inline style objects only for dynamic/computed values.
 
 **NOT installed:** react-native-paper, react-native-big-calendar, react-native-calendars. Do not use these.
