@@ -1,265 +1,94 @@
-import { useMemo, useState } from "react";
-import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
-import { Calendar } from "react-native-calendars";
-import { BarChart } from "react-native-gifted-charts";
+import { useMemo } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import AppText from "@mobile/components/ui/text";
-import type { Transaction } from "@mobile/lib/transactions";
+import { useTheme } from "@mobile/lib/theme";
+import { useAccountsStore } from "@mobile/store/slices/accounts";
 import { useSmsStore } from "@mobile/store/slices/sms";
+import HomeHeader from "@mobile/components/home/HomeHeader";
+import MonthlySummaryCard from "@mobile/components/home/MonthlySummaryCard";
+import AccountStats from "@mobile/components/home/AccountStats";
+import MonthlyOverview from "@mobile/components/home/MonthlyOverview";
+import AccountList from "@mobile/components/home/AccountList";
+import AppText from "@mobile/components/ui/text";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const CHART_H_PAD = 32;
-
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-function toDateStr(ts: number): string {
-  const d = new Date(ts);
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, "0"),
-    String(d.getDate()).padStart(2, "0"),
-  ].join("-");
-}
-
-function isDebit(t: Transaction): boolean {
-  return t.transactionType === "debit";
-}
-
-function isInflow(t: Transaction): boolean {
-  return (
-    t.transactionType === "credit" ||
-    t.transactionType === "refund" ||
-    t.transactionType === "payment"
-  );
-}
-
-function fmt(v: number): string {
-  return "₹" + v.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+function getMonthBounds(): { start: number; end: number } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+  return { start, end };
 }
 
 export default function HomeScreen() {
-  const messages = useSmsStore((s) => s.messages);
+  const { theme } = useTheme();
+  const accounts = useAccountsStore((s) => s.accounts);
+  const transactions = useSmsStore((s) => s.messages);
 
-  const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth()); // 0-indexed
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const { currentMonthTxns, totalSpend, totalCredit, due, overdue } = useMemo(() => {
+    const { start, end } = getMonthBounds();
+    const now = Date.now();
 
-  const calendarKey = `${year}-${String(month + 1).padStart(2, "0")}`;
-  const currentStr = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+    const currentMonthTxns = transactions.filter(
+      (t) => t.category === "financial" && t.timestamp >= start && t.timestamp <= end,
+    );
 
-  const { byDate, markedDates, barData, totalDebit, totalCredit, daysInMonth } =
-    useMemo(() => {
-      const byDate = new Map<string, Transaction[]>();
-      let totalDebit = 0;
-      let totalCredit = 0;
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const totalSpend = currentMonthTxns
+      .filter((t) => t.transactionType === "debit")
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
 
-      for (const t of messages) {
-        if (t.category !== "financial") continue;
-        const d = new Date(t.timestamp);
-        if (d.getFullYear() !== year || d.getMonth() !== month) continue;
-        const key = toDateStr(t.timestamp);
-        if (!byDate.has(key)) byDate.set(key, []);
-        byDate.get(key)!.push(t);
-        if (t.amount) {
-          if (isDebit(t)) totalDebit += t.amount;
-          else if (isInflow(t)) totalCredit += t.amount;
-        }
-      }
+    const totalCredit = currentMonthTxns
+      .filter(
+        (t) =>
+          t.transactionType === "credit" ||
+          t.transactionType === "refund" ||
+          t.transactionType === "payment",
+      )
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
 
-      const markedDates: Record<string, object> = {};
-      for (const [date, txns] of byDate.entries()) {
-        const dots: { key: string; color: string }[] = [];
-        if (txns.some(isDebit)) dots.push({ key: "d", color: "#dc2626" });
-        if (txns.some(isInflow)) dots.push({ key: "c", color: "#16a34a" });
-        markedDates[date] = {
-          dots,
-          ...(date === selectedDate && {
-            selected: true,
-            selectedColor: "#111827",
-          }),
-        };
-      }
-      if (selectedDate && !markedDates[selectedDate]) {
-        markedDates[selectedDate] = {
-          selected: true,
-          selectedColor: "#111827",
-        };
-      }
+    const due = accounts.filter(
+      (a) => a.dueDate !== null && a.dueDate > now,
+    ).length;
 
-      const mm = String(month + 1).padStart(2, "0");
-      const barData = Array.from({ length: daysInMonth }, (_, i) => {
-        const dd = String(i + 1).padStart(2, "0");
-        const dateKey = `${year}-${mm}-${dd}`;
-        const value = (byDate.get(dateKey) ?? [])
-          .filter(isDebit)
-          .reduce((s, t) => s + (t.amount ?? 0), 0);
-        return {
-          value,
-          label: (i + 1) % 7 === 1 ? String(i + 1) : "",
-          frontColor: dateKey === selectedDate ? "#2563eb" : "#111827",
-        };
-      });
+    const overdue = accounts.filter(
+      (a) => a.dueDate !== null && a.dueDate < now,
+    ).length;
 
-      return {
-        byDate,
-        markedDates,
-        barData,
-        totalDebit,
-        totalCredit,
-        daysInMonth,
-      };
-    }, [messages, year, month, selectedDate]);
+    return { currentMonthTxns, totalSpend, totalCredit, due, overdue };
+  }, [transactions, accounts]);
 
-  const selectedTxns = selectedDate ? (byDate.get(selectedDate) ?? []) : [];
-  const maxBar = Math.max(...barData.map((b) => b.value), 1);
-  const barW = Math.max(
-    4,
-    Math.floor((SCREEN_W - CHART_H_PAD * 2) / daysInMonth) - 2,
-  );
-  const hasAny = messages.some((t) => t.category === "financial");
+  const hasNoData = accounts.length === 0 && transactions.length === 0;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: theme.background }]}
+      edges={["top", "left", "right"]}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* Summary */}
-        <View style={styles.summaryRow}>
-          <View style={[styles.card, styles.debitCard]}>
-            <AppText variant="small" style={styles.cardLabel}>
-              Spent this month
-            </AppText>
-            <AppText variant="defaultSemiBold" style={styles.debitVal}>
-              {fmt(totalDebit)}
-            </AppText>
-          </View>
-          <View style={[styles.card, styles.creditCard]}>
-            <AppText variant="small" style={styles.cardLabel}>
-              Received
-            </AppText>
-            <AppText variant="defaultSemiBold" style={styles.creditVal}>
-              {fmt(totalCredit)}
-            </AppText>
-          </View>
-        </View>
+        <HomeHeader />
 
-        {/* Daily spend bar chart */}
-        {hasAny && (
-          <View style={styles.chartBox}>
-            <AppText variant="small" style={styles.sectionLabel}>
-              Daily Spend — {MONTH_NAMES[month]} {year}
-            </AppText>
-            <BarChart
-              data={barData}
-              barWidth={barW}
-              spacing={2}
-              barBorderRadius={2}
-              noOfSections={3}
-              maxValue={maxBar}
-              width={SCREEN_W - CHART_H_PAD * 2}
-              hideYAxisText
-              yAxisThickness={0}
-              xAxisThickness={1}
-              xAxisColor="#e5e7eb"
-              rulesColor="#f3f4f6"
-              initialSpacing={barW / 2}
-              endSpacing={barW / 2}
-            />
-          </View>
-        )}
-
-        {/* Monthly calendar */}
-        <Calendar
-          key={calendarKey}
-          current={currentStr}
-          markedDates={markedDates}
-          markingType="multi-dot"
-          onDayPress={(day) =>
-            setSelectedDate((prev) =>
-              prev === day.dateString ? null : day.dateString,
-            )
-          }
-          onMonthChange={(m) => {
-            setYear(m.year);
-            setMonth(m.month - 1);
-            setSelectedDate(null);
-          }}
-          hideExtraDays
-          theme={{
-            backgroundColor: "#f9fafb",
-            calendarBackground: "#f9fafb",
-            selectedDayBackgroundColor: "#111827",
-            selectedDayTextColor: "#ffffff",
-            todayTextColor: "#2563eb",
-            todayBackgroundColor: "#eff6ff",
-            dayTextColor: "#111827",
-            textDisabledColor: "#d1d5db",
-            arrowColor: "#111827",
-            monthTextColor: "#111827",
-            textMonthFontSize: 16,
-            textDayFontSize: 14,
-            textDayHeaderFontSize: 12,
-          }}
+        <MonthlySummaryCard
+          totalSpend={totalSpend}
+          accountCount={accounts.length}
         />
 
-        {/* Selected day transactions */}
-        {selectedDate && (
-          <View style={styles.daySection}>
-            <AppText variant="captionSemiBold" style={styles.dayHeader}>
-              {Number(selectedDate.split("-")[2])}{" "}
-              {MONTH_NAMES[Number(selectedDate.split("-")[1]) - 1]}
-            </AppText>
-            {selectedTxns.length === 0 ? (
-              <AppText variant="small" style={styles.dim}>
-                No transactions
-              </AppText>
-            ) : (
-              selectedTxns.map((t) => (
-                <View key={t.id} style={styles.txnRow}>
-                  <View style={styles.txnInfo}>
-                    <AppText variant="caption" numberOfLines={1}>
-                      {t.merchant ?? t.sender}
-                    </AppText>
-                    <AppText variant="small" style={styles.dim}>
-                      {t.transactionType.toUpperCase()}
-                    </AppText>
-                  </View>
-                  {t.amount ? (
-                    <AppText
-                      variant="captionSemiBold"
-                      style={isDebit(t) ? styles.debitVal : styles.creditVal}
-                    >
-                      {isInflow(t) ? "+" : "−"}
-                      {fmt(t.amount)}
-                    </AppText>
-                  ) : null}
-                </View>
-              ))
-            )}
-          </View>
-        )}
+        <AccountStats
+          total={accounts.length}
+          due={due}
+          overdue={overdue}
+          paid={0}
+        />
 
-        {!hasAny && (
-          <View style={styles.empty}>
-            <AppText variant="caption" style={styles.dim}>
-              No transactions yet. Import SMS from the List tab.
+        <MonthlyOverview debit={totalSpend} credit={totalCredit} />
+
+        <AccountList accounts={accounts} transactions={transactions} />
+
+        {hasNoData && (
+          <View style={styles.emptyState}>
+            <AppText variant="caption" themeKey="textMuted" style={styles.emptyText}>
+              Import SMS from the List tab to see your accounts and transactions.
             </AppText>
           </View>
         )}
@@ -269,58 +98,19 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f9fafb" },
-  scroll: { paddingBottom: 32 },
-  summaryRow: {
-    flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  card: {
+  safe: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 14,
-    gap: 4,
-    borderLeftWidth: 3,
   },
-  debitCard: { borderLeftColor: "#dc2626" },
-  creditCard: { borderLeftColor: "#16a34a" },
-  cardLabel: { color: "#6b7280" },
-  debitVal: { color: "#dc2626" },
-  creditVal: { color: "#16a34a" },
-  chartBox: {
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 10,
-    padding: 16,
-    paddingBottom: 8,
-    gap: 8,
-    overflow: "hidden",
+  scroll: {
+    paddingBottom: 40,
   },
-  sectionLabel: { color: "#6b7280" },
-  daySection: {
-    margin: 16,
-    marginTop: 4,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 14,
-    gap: 2,
-  },
-  dayHeader: { color: "#111827", marginBottom: 6 },
-  txnRow: {
-    flexDirection: "row",
+  emptyState: {
+    paddingHorizontal: 32,
+    paddingTop: 8,
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    paddingVertical: 6,
-    borderTopWidth: 1,
-    borderTopColor: "#f3f4f6",
   },
-  txnInfo: { flex: 1, gap: 1 },
-  dim: { color: "#6b7280" },
-  empty: { padding: 32, alignItems: "center" },
+  emptyText: {
+    textAlign: "center",
+    lineHeight: 20,
+  },
 });

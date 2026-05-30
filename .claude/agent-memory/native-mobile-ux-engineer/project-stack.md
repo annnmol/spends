@@ -18,7 +18,11 @@ This is a React Native + Expo SDK 56 app using Expo Router (file-based tabs at `
 - `BankIcon` from `@mobile/components/ui/bank-icon` — accepts `bankName: string|null`, `slugs?: string[]`, `size?: number`
 - `SafeAreaView` imported from `react-native-safe-area-context` (not RN core)
 
-**State:** Zustand stores at `src/store/slices/`. `useAccountsStore` exposes `{ accounts }` array of `Account` type.
+**State:** Zustand stores at `src/store/slices/`. `useAccountsStore` exposes `{ accounts, loading, error }`. `useSmsStore` exposes `{ messages: Transaction[], loading, listening, pendingCount }` — `messages` is the full transaction list loaded from SQLite.
+
+**Transaction filtering pattern:** Filter by `category === "financial"` first, then by `transactionType` ("debit" | "credit" | "refund" | "payment"). Month bounds via `new Date(y, m, 1).getTime()` / `new Date(y, m+1, 0, 23,59,59,999).getTime()`.
+
+**Home screen components:** Built at `src/components/home/` — HomeHeader, MonthlySummaryCard, AccountStats, MonthlyOverview, AccountStatusBadge, AccountCard, AccountList. All `memo()`-wrapped. AccountCard handles 5 account types (credit_card, debit_card, bank_account, upi/wallet, other) with conditional body rendering.
 
 **Styling convention:** `StyleSheet.create()` for all styles, inline style objects only for dynamic/computed values.
 
