@@ -5,7 +5,8 @@ import {
   loadTransactions,
   saveTransaction,
   saveTransactions,
-} from "@mobile/lib/saveTransaction";
+  type Transaction,
+} from "@mobile/lib/transactions";
 import SmsModule from "../../../modules/sms-module";
 import type { SmsMessage } from "../../../modules/sms-module";
 import { useAccountsStore } from "./accounts";
@@ -24,7 +25,7 @@ export type SmsState = {
   loading: boolean;
   listening: boolean;
   error: string | null;
-  messages: SmsMessage[];
+  messages: Transaction[];
   pendingCount: number | null;
 
   init: () => Promise<void>;
@@ -52,7 +53,6 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
   pendingCount: null,
 
   init: async () => {
-    // Permission + auto-start listener
     try {
       const res = await SmsModule.getSmsPermissionStatus();
       const permission = toPermissionState(res.status);
@@ -64,12 +64,11 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     }
-    // Load persisted transactions from SQLite
     try {
       const saved = await loadTransactions();
       if (saved.length > 0) set({ messages: saved });
     } catch {
-      // non-fatal — app still works without cached messages
+      // non-fatal
     }
   },
 
@@ -93,9 +92,10 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
   readRecent: async () => {
     set({ error: null, loading: true });
     try {
+      const accounts = useAccountsStore.getState().accounts;
       const list = await SmsModule.getRecentSms(50);
-      set({ messages: list });
-      saveTransactions(list, true, useAccountsStore.getState().accounts).catch(() => {});
+      await saveTransactions(list, true, accounts);
+      set({ messages: await loadTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -106,9 +106,10 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
   readAll: async () => {
     set({ error: null, loading: true });
     try {
+      const accounts = useAccountsStore.getState().accounts;
       const list = await SmsModule.getAllSms();
-      set({ messages: list });
-      saveTransactions(list, true, useAccountsStore.getState().accounts).catch(() => {});
+      await saveTransactions(list, true, accounts);
+      set({ messages: await loadTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -119,9 +120,10 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
   readSince: async () => {
     set({ error: null, loading: true });
     try {
+      const accounts = useAccountsStore.getState().accounts;
       const list = await SmsModule.getSmsAfterDate(SINCE_TIMESTAMP);
-      set({ messages: list });
-      saveTransactions(list, true, useAccountsStore.getState().accounts).catch(() => {});
+      await saveTransactions(list, true, accounts);
+      set({ messages: await loadTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -145,10 +147,10 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     }
   },
 
-  // Called from SmsListenerBridge — always gets latest accounts via getState(), no stale closure
   addMessage: async (msg: SmsMessage) => {
-    set((state) => ({ messages: [msg, ...state.messages] }));
-    saveTransaction(msg, null, useAccountsStore.getState().accounts).catch(() => {});
+    const accounts = useAccountsStore.getState().accounts;
+    await saveTransaction(msg, null, accounts);
+    set({ messages: await loadTransactions() });
   },
 
   fakeFinancial: async () => {
@@ -205,7 +207,11 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     try {
       const pending = await SmsModule.getPendingBackgroundSms();
       set({ pendingCount: pending.length });
-      if (pending.length > 0) set({ messages: pending });
+      if (pending.length > 0) {
+        const accounts = useAccountsStore.getState().accounts;
+        await saveTransactions(pending, false, accounts);
+        set({ messages: await loadTransactions() });
+      }
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     }

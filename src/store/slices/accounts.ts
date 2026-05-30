@@ -13,7 +13,7 @@ import {
   detectAccountsFromSms,
   type DetectedAccount,
 } from "@mobile/lib/detectAccountsFromSms";
-import { linkAllUnlinkedTransactions } from "@mobile/lib/saveTransaction";
+import { linkAllUnlinkedTransactions, unlinkTransactionsForAccount } from "@mobile/lib/transactions";
 
 export type AccountsState = {
   accounts: Account[];
@@ -64,6 +64,7 @@ export const useAccountsStore = create<AccountsState>()((set) => ({
     set({ error: null });
     try {
       await dbUpdate(id, data);
+      await unlinkTransactionsForAccount(id);
       await refreshAndLink();
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });

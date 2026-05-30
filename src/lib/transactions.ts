@@ -4,6 +4,18 @@ import { getDb } from "./db";
 import { matchAccount } from "./matchAccount";
 import { parseTransactionSms } from "./parseTransactionSms";
 
+export type Transaction = {
+  id: string;
+  sender: string;
+  body: string;
+  timestamp: number;
+  accountId: number | null;
+  transactionType: string;
+  category: string;
+  amount: number | null;
+  merchant: string | null;
+};
+
 function djb2(s: string): string {
   let h = 5381;
   for (let i = 0; i < s.length; i++) {
@@ -94,24 +106,36 @@ type TransactionRow = {
   raw_sms: string;
   timestamp: number;
   transaction_type: string | null;
+  category: string | null;
+  amount: number | null;
+  merchant: string | null;
+  account_id: number | null;
 };
+
+export async function unlinkTransactionsForAccount(accountId: number): Promise<void> {
+  const db = await getDb();
+  await db.runAsync("UPDATE transactions SET account_id = NULL WHERE account_id = ?", accountId);
+}
 
 export async function clearAllTransactions(): Promise<void> {
   const db = await getDb();
   await db.runAsync("DELETE FROM transactions");
 }
 
-export async function loadTransactions(): Promise<SmsMessage[]> {
+export async function loadTransactions(): Promise<Transaction[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<TransactionRow>(
-    "SELECT * FROM transactions ORDER BY timestamp DESC",
-    // "SELECT sms_id, message_hash, sender, raw_sms, timestamp FROM transactions ORDER BY timestamp DESC"
+    "SELECT sms_id, message_hash, sender, raw_sms, timestamp, transaction_type, category, amount, merchant, account_id FROM transactions ORDER BY timestamp DESC",
   );
-
   return rows.map((row) => ({
     id: row.sms_id ?? row.message_hash,
     sender: row.sender,
     body: row.raw_sms,
     timestamp: row.timestamp,
+    accountId: row.account_id ?? null,
+    transactionType: row.transaction_type ?? "unknown",
+    category: row.category ?? "unknown",
+    amount: row.amount ?? null,
+    merchant: row.merchant ?? null,
   }));
 }

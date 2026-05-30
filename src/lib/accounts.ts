@@ -107,18 +107,48 @@ export async function updateAccount(
   const db = await getDb();
   const now = Date.now();
   const fields: string[] = [];
-  const values: unknown[] = [];
+  const values: (string | number | null)[] = [];
 
-  if (data.name !== undefined) { fields.push("name = ?"); values.push(data.name); }
-  if (data.type !== undefined) { fields.push("type = ?"); values.push(data.type); }
-  if ("bankName" in data) { fields.push("bank_name = ?"); values.push(data.bankName ?? null); }
-  if ("last4" in data) { fields.push("last4 = ?"); values.push(data.last4 ?? null); }
-  if (data.slugs !== undefined) { fields.push("slugs = ?"); values.push(JSON.stringify(data.slugs)); }
-  if ("billingDate" in data) { fields.push("billing_date = ?"); values.push(data.billingDate ?? null); }
-  if ("dueDate" in data) { fields.push("due_date = ?"); values.push(data.dueDate ?? null); }
-  if ("icon" in data) { fields.push("icon = ?"); values.push(data.icon ?? null); }
-  if ("color" in data) { fields.push("color = ?"); values.push(data.color ?? null); }
-  if ("notes" in data) { fields.push("notes = ?"); values.push(data.notes ?? null); }
+  if (data.name !== undefined) {
+    fields.push("name = ?");
+    values.push(data.name);
+  }
+  if (data.type !== undefined) {
+    fields.push("type = ?");
+    values.push(data.type);
+  }
+  if ("bankName" in data) {
+    fields.push("bank_name = ?");
+    values.push(data.bankName ?? null);
+  }
+  if ("last4" in data) {
+    fields.push("last4 = ?");
+    values.push(data.last4 ?? null);
+  }
+  if (data.slugs !== undefined) {
+    fields.push("slugs = ?");
+    values.push(JSON.stringify(data.slugs));
+  }
+  if ("billingDate" in data) {
+    fields.push("billing_date = ?");
+    values.push(data.billingDate ?? null);
+  }
+  if ("dueDate" in data) {
+    fields.push("due_date = ?");
+    values.push(data.dueDate ?? null);
+  }
+  if ("icon" in data) {
+    fields.push("icon = ?");
+    values.push(data.icon ?? null);
+  }
+  if ("color" in data) {
+    fields.push("color = ?");
+    values.push(data.color ?? null);
+  }
+  if ("notes" in data) {
+    fields.push("notes = ?");
+    values.push(data.notes ?? null);
+  }
 
   if (fields.length === 0) return;
   fields.push("updated_at = ?");
@@ -133,7 +163,10 @@ export async function updateAccount(
 export async function deleteAccount(id: number): Promise<void> {
   const db = await getDb();
   // Unlink transactions before deleting
-  await db.runAsync("UPDATE transactions SET account_id = NULL WHERE account_id = ?", id);
+  await db.runAsync(
+    "UPDATE transactions SET account_id = NULL WHERE account_id = ?",
+    id,
+  );
   await db.runAsync("DELETE FROM accounts WHERE id = ?", id);
 }
 

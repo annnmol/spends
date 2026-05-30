@@ -1,88 +1,128 @@
+// import * as Clipboard from "expo-clipboard";
 import AppText from "@mobile/components/ui/text";
-import {
-  parseTransactionSms,
-  type ParsedTransactionSms,
-  type SmsCategory,
-} from "@mobile/lib/parseTransactionSms";
+import type { Transaction } from "@mobile/lib/transactions";
 import { memo } from "react";
-import { StyleSheet, View } from "react-native";
-import type { SmsMessage } from "../../../modules/sms-module";
+import { Pressable, StyleSheet, View } from "react-native";
 
-type Props = { item: SmsMessage };
+type Props = { item: Transaction; accountName?: string };
 
 function formatDate(ts: number): string {
   const d = new Date(ts);
   const day = String(d.getDate()).padStart(2, "0");
   const month = d.toLocaleString("en-US", { month: "short" });
-  const year = d.getFullYear();
   let hours = d.getHours();
   const minutes = String(d.getMinutes()).padStart(2, "0");
   const ampm = hours >= 12 ? "PM" : "AM";
   hours = hours % 12 || 12;
-  return `${day} ${month} ${year}, ${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
+  return `${day} ${month}, ${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
 }
 
-const CATEGORY_LABEL: Record<SmsCategory, string> = {
-  financial:   "Financial",
-  otp:         "OTP",
-  promotional: "Promo",
-  unknown:     "Other",
+const TXN_TYPE: Record<
+  string,
+  { bg: string; fg: string; label: string } | undefined
+> = {
+  debit: { bg: "#fee2e2", fg: "#dc2626", label: "Debit" },
+  credit: { bg: "#dcfce7", fg: "#16a34a", label: "Credit" },
+  refund: { bg: "#dbeafe", fg: "#2563eb", label: "Refund" },
+  payment: { bg: "#ede9fe", fg: "#7c3aed", label: "Payment" },
+  statement: { bg: "#f3f4f6", fg: "#6b7280", label: "Statement" },
+  otp: { bg: "#fef9c3", fg: "#854d0e", label: "OTP" },
+  promotional: { bg: "#fce7f3", fg: "#9d174d", label: "Promo" },
 };
 
-const CATEGORY_COLORS: Record<SmsCategory, { bg: string; text: string }> = {
-  financial:   { bg: "#dcfce7", text: "#15803d" },
-  otp:         { bg: "#fef9c3", text: "#854d0e" },
-  promotional: { bg: "#fce7f3", text: "#9d174d" },
-  unknown:     { bg: "#f3f4f6", text: "#6b7280" },
+const AMOUNT_COLOR: Record<string, string> = {
+  debit: "#dc2626",
+  credit: "#16a34a",
+  payment: "#16a34a",
+  refund: "#2563eb",
 };
 
-function renderParsed(p: ParsedTransactionSms): string | null {
-  const parts: string[] = [];
-  if (p.amount !== undefined) parts.push(`₹${p.amount}`);
-  if (p.merchant) parts.push(`@ ${p.merchant}`);
-  if (p.cardLast4) parts.push(`card xx${p.cardLast4}`);
-  if (p.upiRef) parts.push(`ref ${p.upiRef}`);
-  return parts.length ? parts.join("  •  ") : null;
+const AMOUNT_PREFIX: Record<string, string> = {
+  debit: "- ",
+  credit: "+ ",
+  payment: "+ ",
+  refund: "↩ ",
+};
+
+async function copyBody(body: string) {
+  // await Clipboard.setStringAsync(body);
+  // ToastAndroid.show("SMS copied", ToastAndroid.SHORT);
 }
 
-function SmsCardBase({ item }: Props) {
-  const parsed = parseTransactionSms(item.body, item.sender);
-  const summary = renderParsed(parsed);
-  const colors = CATEGORY_COLORS[parsed.category];
+function SmsCardBase({ item, accountName }: Props) {
+  const {
+    category,
+    transactionType,
+    amount,
+    merchant,
+    sender,
+    body,
+    timestamp,
+  } = item;
+
+  const badge = TXN_TYPE[category === "financial" ? transactionType : category];
+  const amountColor = AMOUNT_COLOR[transactionType] ?? "#111827";
+  const amountStr =
+    amount != null
+      ? `${AMOUNT_PREFIX[transactionType] ?? ""}₹${amount.toLocaleString("en-IN")}`
+      : null;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.headerRow}>
+    <Pressable onLongPress={() => copyBody(body)} style={styles.card}>
+      <View style={styles.row}>
         <AppText
           variant="defaultSemiBold"
           numberOfLines={1}
           style={styles.sender}
         >
-          {item.sender || "Unknown"}
+          {sender || "Unknown"}
         </AppText>
-        <View style={styles.headerRight}>
-          <View style={[styles.badge, { backgroundColor: colors.bg }]}>
-            <AppText
-              variant="caption"
-              style={[styles.badgeText, { color: colors.text }]}
-            >
-              {CATEGORY_LABEL[parsed.category]}
-            </AppText>
-          </View>
-          <AppText variant="small" style={styles.date}>
-            {formatDate(item.timestamp)}
-          </AppText>
-        </View>
+        <AppText variant="small" style={styles.date}>
+          {formatDate(timestamp)}
+        </AppText>
       </View>
-      <AppText variant="caption" numberOfLines={6} style={styles.body}>
-        {item.body}
+
+      <View style={styles.row}>
+        <View style={styles.chips}>
+          {badge && (
+            <View style={[styles.chip, { backgroundColor: badge.bg }]}>
+              <AppText
+                variant="caption"
+                style={[styles.chipText, { color: badge.fg }]}
+              >
+                {badge.label}
+              </AppText>
+            </View>
+          )}
+          {accountName && (
+            <View style={[styles.chip, styles.accountChip]}>
+              <AppText
+                variant="caption"
+                style={styles.accountChipText}
+                numberOfLines={1}
+              >
+                {accountName}
+              </AppText>
+            </View>
+          )}
+        </View>
+        {amountStr && (
+          <AppText variant="defaultSemiBold" style={{ color: amountColor }}>
+            {amountStr}
+          </AppText>
+        )}
+      </View>
+
+      <AppText variant="caption" numberOfLines={4} style={styles.body}>
+        {body}
       </AppText>
-      {summary ? (
-        <AppText variant="captionSemiBold" style={styles.parsed}>
-          {summary}
+
+      {merchant && (
+        <AppText variant="caption" style={styles.merchant}>
+          @ {merchant}
         </AppText>
-      ) : null}
-    </View>
+      )}
+    </Pressable>
   );
 }
 
@@ -94,30 +134,32 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "#e5e7eb",
-    gap: 4,
+    gap: 5,
   },
-  headerRow: {
+  row: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexShrink: 0,
-  },
   sender: { flexShrink: 1 },
-  date: { color: "#6b7280" },
-  badge: {
+  date: { color: "#9ca3af", flexShrink: 0 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 4, flex: 1 },
+  chip: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
-  badgeText: { fontSize: 10, fontWeight: "600" },
-  body: { color: "#111827" },
-  parsed: { color: "#2563eb", marginTop: 4 },
+  chipText: { fontSize: 10, fontWeight: "600" },
+  accountChip: {
+    backgroundColor: "#f0f9ff",
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+    maxWidth: 140,
+  },
+  accountChipText: { fontSize: 10, fontWeight: "600", color: "#0369a1" },
+  body: { color: "#374151", lineHeight: 18 },
+  merchant: { color: "#6b7280", fontStyle: "italic" },
 });
 
 export default memo(SmsCardBase);
