@@ -1,5 +1,5 @@
 import AppText from "@mobile/components/ui/text";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Transaction } from "@mobile/db/transcations";
 import * as Clipboard from "expo-clipboard";
 import { memo } from "react";
 import { Pressable, StyleSheet, ToastAndroid, View } from "react-native";
@@ -21,27 +21,27 @@ const TXN_TYPE: Record<
   string,
   { bg: string; fg: string; label: string } | undefined
 > = {
-  debit: { bg: "#fee2e2", fg: "#dc2626", label: "Debit" },
-  credit: { bg: "#dcfce7", fg: "#16a34a", label: "Credit" },
-  refund: { bg: "#dbeafe", fg: "#2563eb", label: "Refund" },
-  payment: { bg: "#ede9fe", fg: "#7c3aed", label: "Payment" },
-  statement: { bg: "#f3f4f6", fg: "#6b7280", label: "Statement" },
-  otp: { bg: "#fef9c3", fg: "#854d0e", label: "OTP" },
-  promotional: { bg: "#fce7f3", fg: "#9d174d", label: "Promo" },
+  DEBIT:     { bg: "#fee2e2", fg: "#dc2626", label: "Debit" },
+  CREDIT:    { bg: "#dcfce7", fg: "#16a34a", label: "Credit" },
+  REFUND:    { bg: "#dbeafe", fg: "#2563eb", label: "Refund" },
+  PAYMENT:   { bg: "#ede9fe", fg: "#7c3aed", label: "Payment" },
+  STATEMENT: { bg: "#f3f4f6", fg: "#6b7280", label: "Statement" },
+  OTP:       { bg: "#fef9c3", fg: "#854d0e", label: "OTP" },
+  UNKNOWN:   { bg: "#fce7f3", fg: "#9d174d", label: "Other" },
 };
 
 const AMOUNT_COLOR: Record<string, string> = {
-  debit: "#dc2626",
-  credit: "#16a34a",
-  payment: "#16a34a",
-  refund: "#2563eb",
+  DEBIT: "#dc2626",
+  CREDIT: "#16a34a",
+  PAYMENT: "#16a34a",
+  REFUND: "#2563eb",
 };
 
 const AMOUNT_PREFIX: Record<string, string> = {
-  debit: "- ",
-  credit: "+ ",
-  payment: "+ ",
-  refund: "↩ ",
+  DEBIT: "- ",
+  CREDIT: "+ ",
+  PAYMENT: "+ ",
+  REFUND: "↩ ",
 };
 
 async function copyBody(body: string) {
@@ -51,16 +51,15 @@ async function copyBody(body: string) {
 
 function SmsCardBase({ item, accountName }: Props) {
   const {
-    category,
     transactionType,
     amount,
-    merchant,
+    merchantName,
     sender,
     body,
     timestamp,
   } = item;
 
-  const badge = TXN_TYPE[category === "financial" ? transactionType : category];
+  const badge = TXN_TYPE[transactionType];
   const amountColor = AMOUNT_COLOR[transactionType] ?? "#111827";
   const amountStr =
     amount != null

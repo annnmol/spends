@@ -26,25 +26,27 @@ export default function InsightsScreen() {
 
     const filteredTxns = transactions.filter(
       (t) =>
-        t.category === "financial" && t.timestamp >= start && t.timestamp <= end,
+        ["DEBIT", "CREDIT", "REFUND", "PAYMENT"].includes(t.transactionType) &&
+        t.timestamp >= start &&
+        t.timestamp <= end,
     );
 
     const totalSpend = filteredTxns
-      .filter((t) => t.transactionType === "debit" && t.amount !== null)
+      .filter((t) => t.transactionType === "DEBIT" && t.amount !== null)
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
 
     const totalCredit = filteredTxns
       .filter(
         (t) =>
-          (t.transactionType === "credit" ||
-            t.transactionType === "refund" ||
-            t.transactionType === "payment") &&
+          (t.transactionType === "CREDIT" ||
+            t.transactionType === "REFUND" ||
+            t.transactionType === "PAYMENT") &&
           t.amount !== null,
       )
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
 
     const txnCount = filteredTxns.filter(
-      (t) => t.transactionType === "debit",
+      (t) => t.transactionType === "DEBIT",
     ).length;
 
     return { totalSpend, totalCredit, txnCount, filteredTxns };

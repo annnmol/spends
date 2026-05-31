@@ -4,7 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { useTheme } from "@mobile/lib/theme";
 import { Fonts } from "@mobile/lib/fonts";
 import AppText from "@mobile/components/ui/text";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Transaction } from "@mobile/db/transcations";
 
 type Props = {
   txn: Transaction;
@@ -26,7 +26,7 @@ function formatDate(ts: number): string {
 }
 
 function isCredit(type: string): boolean {
-  return type === "credit" || type === "refund" || type === "payment";
+  return type === "CREDIT" || type === "REFUND" || type === "PAYMENT";
 }
 
 function RecentTransactionItem({ txn }: Props) {
@@ -36,7 +36,7 @@ function RecentTransactionItem({ txn }: Props) {
   const amountColor = credit ? theme.success : theme.danger;
   const dotColor = credit ? theme.success : theme.danger;
   const sign = credit ? "+" : "−";
-  const displayName = txn.merchant ?? txn.sender;
+  const displayName = txn.merchantName ?? txn.sender;
 
   return (
     <View style={[styles.row, { borderBottomColor: theme.border }]}>

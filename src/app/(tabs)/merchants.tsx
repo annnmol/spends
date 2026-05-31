@@ -11,40 +11,24 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppButton from "@mobile/components/ui/button";
-import MerchantIcon from "@mobile/components/ui/merchant-icon";
+import BrandIcon from "@mobile/components/ui/brand-icon";
 import AppText from "@mobile/components/ui/text";
 import type {
   CreateMerchantInput,
   Merchant,
-  MerchantCategory,
-} from "@mobile/lib/merchants";
+} from "@mobile/db/merchants";
+import { CATEGORIES } from "@mobile/db/categories";
 import { useMerchantsStore } from "@mobile/store/slices/merchants";
 
-const MERCHANT_CATEGORIES: MerchantCategory[] = [
-  "food",
-  "transport",
-  "entertainment",
-  "subscription",
-  "utilities",
-  "shopping",
-  "other",
-];
-
-const CATEGORY_LABELS: Record<MerchantCategory, string> = {
-  food: "Food",
-  transport: "Transport",
-  entertainment: "Entertainment",
-  subscription: "Subscription",
-  utilities: "Utilities",
-  shopping: "Shopping",
-  other: "Other",
-};
+const CATEGORY_LABELS: Record<number, string> = Object.fromEntries(
+  CATEGORIES.map((c) => [c.id, c.name.charAt(0).toUpperCase() + c.name.slice(1)]),
+);
 
 type Mode = "list" | "add" | "edit";
 
 const EMPTY_FORM = {
   name: "",
-  category: "other" as MerchantCategory,
+  categoryId: null as number | null,
   slugs: "",
   notes: "",
 };
@@ -53,7 +37,7 @@ function parseForm(f: typeof EMPTY_FORM): CreateMerchantInput | null {
   if (!f.name.trim()) return null;
   return {
     name: f.name.trim(),
-    category: f.category,
+    categoryId: f.categoryId,
     slugs: f.slugs
       .split(",")
       .map((s) => s.trim().toUpperCase())
@@ -82,7 +66,7 @@ export default function MerchantsScreen() {
   function openEdit(m: Merchant) {
     setForm({
       name: m.name,
-      category: m.category,
+      categoryId: m.categoryId,
       slugs: m.slugs.join(", "),
       notes: m.notes ?? "",
     });
@@ -140,17 +124,17 @@ export default function MerchantsScreen() {
 
           <AppText variant="caption" style={styles.label}>Category</AppText>
           <View style={styles.chipRow}>
-            {MERCHANT_CATEGORIES.map((c) => (
+            {CATEGORIES.map((c) => (
               <TouchableOpacity
-                key={c}
-                style={[styles.chip, form.category === c && styles.chipActive]}
-                onPress={() => setForm((f) => ({ ...f, category: c }))}
+                key={c.id}
+                style={[styles.chip, form.categoryId === c.id && styles.chipActive]}
+                onPress={() => setForm((f) => ({ ...f, categoryId: c.id }))}
               >
                 <AppText
                   variant="caption"
-                  style={form.category === c ? styles.chipLabelActive : undefined}
+                  style={form.categoryId === c.id ? styles.chipLabelActive : undefined}
                 >
-                  {CATEGORY_LABELS[c]}
+                  {CATEGORY_LABELS[c.id]}
                 </AppText>
               </TouchableOpacity>
             ))}
@@ -222,16 +206,14 @@ export default function MerchantsScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <MerchantIcon
-              name={item.name}
-              slugs={item.slugs}
-              size={44}
-            />
+            <BrandIcon iconKey={item.iconKey} size={44} />
             <View style={styles.cardMain}>
               <AppText variant="default">{item.name}</AppText>
-              <AppText variant="caption" style={styles.dim}>
-                {CATEGORY_LABELS[item.category]}
-              </AppText>
+              {item.categoryId !== null && (
+                <AppText variant="caption" style={styles.dim}>
+                  {CATEGORY_LABELS[item.categoryId] ?? ""}
+                </AppText>
+              )}
               {item.slugs.length > 0 && (
                 <AppText variant="caption" style={styles.dim}>
                   Slugs: {item.slugs.join(", ")}

@@ -1,11 +1,11 @@
 import { memo } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 
-import BankIcon from "@mobile/components/ui/bank-icon";
+import BrandIcon from "@mobile/components/ui/brand-icon";
 import AppText from "@mobile/components/ui/text";
-import type { Account } from "@mobile/lib/accounts";
+import type { Account } from "@mobile/db/accounts";
 import { useTheme } from "@mobile/lib/theme";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Transaction } from "@mobile/db/transcations";
 
 type Props = {
   transaction: Transaction;
@@ -65,7 +65,7 @@ function CalendarEventCard({ transaction: t, account }: Props) {
   const { theme } = useTheme();
   const meta = txnTypeMeta(t.transactionType, theme);
 
-  const title = t.merchant ?? account?.name ?? t.sender;
+  const title = t.merchantName ?? account?.name ?? t.sender;
   const subtitle = account ? `${account.name}` : t.sender;
 
   return (
@@ -75,10 +75,7 @@ function CalendarEventCard({ transaction: t, account }: Props) {
         { backgroundColor: theme.surface, borderColor: theme.border },
       ]}
     >
-      {account ? (
-        <BankIcon bankName={account.bankName} slugs={account.slugs} size={44} />
-      ) : // <MerchantIcon name={t.merchant ?? t.sender} size={44} />
-      null}
+      {account ? <BrandIcon iconKey={account.iconKey} size={44} /> : null}
 
       <View style={styles.info}>
         <AppText

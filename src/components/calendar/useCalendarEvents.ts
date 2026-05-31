@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
-import type { Account } from "@mobile/lib/accounts";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Account } from "@mobile/db/accounts";
+import type { Transaction } from "@mobile/db/transcations";
 import type { AccountMap } from "./types";
 
 export type CalendarData = {

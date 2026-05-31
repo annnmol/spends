@@ -3,12 +3,12 @@ import * as Clipboard from "expo-clipboard";
 import { memo } from "react";
 import { Platform, Pressable, StyleSheet, ToastAndroid, View } from "react-native";
 
-import BankIcon from "@mobile/components/ui/bank-icon";
+import BrandIcon from "@mobile/components/ui/brand-icon";
 import AppText from "@mobile/components/ui/text";
 import { Fonts } from "@mobile/lib/fonts";
 import { useTheme } from "@mobile/lib/theme";
-import type { Account } from "@mobile/lib/accounts";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Account } from "@mobile/db/accounts";
+import type { Transaction } from "@mobile/db/transcations";
 
 type Props = {
   item: Transaction;
@@ -47,23 +47,23 @@ type BadgeConfig = {
 
 function getBadge(effectiveType: string): BadgeConfig | null {
   switch (effectiveType) {
-    case "debit":      return { label: "Debit",     bg: "#FEE2E2", fg: "#DC2626" };
-    case "credit":     return { label: "Credit",    bg: "#DCFCE7", fg: "#16A34A" };
-    case "payment":    return { label: "Payment",   bg: "#EDE9FE", fg: "#7C3AED" };
-    case "refund":     return { label: "Refund",    bg: "#DBEAFE", fg: "#2563EB" };
-    case "statement":  return { label: "Statement", bg: "#F1F5F9", fg: "#64748B" };
-    case "otp":        return { label: "OTP",       bg: "#FEF9C3", fg: "#854D0E" };
-    case "promotional":return { label: "Promo",     bg: "#FCE7F3", fg: "#9D174D" };
-    default:           return null;
+    case "DEBIT":     return { label: "Debit",     bg: "#FEE2E2", fg: "#DC2626" };
+    case "CREDIT":    return { label: "Credit",    bg: "#DCFCE7", fg: "#16A34A" };
+    case "PAYMENT":   return { label: "Payment",   bg: "#EDE9FE", fg: "#7C3AED" };
+    case "REFUND":    return { label: "Refund",    bg: "#DBEAFE", fg: "#2563EB" };
+    case "STATEMENT": return { label: "Statement", bg: "#F1F5F9", fg: "#64748B" };
+    case "OTP":       return { label: "OTP",       bg: "#FEF9C3", fg: "#854D0E" };
+    case "UNKNOWN":   return { label: "Other",     bg: "#FCE7F3", fg: "#9D174D" };
+    default:          return null;
   }
 }
 
 function getAmountStyle(transactionType: string): { color: string; prefix: string } {
   switch (transactionType) {
-    case "debit":   return { color: "#DC2626", prefix: "−" };
-    case "credit":  return { color: "#16A34A", prefix: "+" };
-    case "payment": return { color: "#16A34A", prefix: "+" };
-    case "refund":  return { color: "#2563EB", prefix: "↩" };
+    case "DEBIT":   return { color: "#DC2626", prefix: "−" };
+    case "CREDIT":  return { color: "#16A34A", prefix: "+" };
+    case "PAYMENT": return { color: "#16A34A", prefix: "+" };
+    case "REFUND":  return { color: "#2563EB", prefix: "↩" };
     default:        return { color: "#0F172A", prefix: ""  };
   }
 }
@@ -93,9 +93,9 @@ function SenderIcon({ sender, size }: { sender: string; size: number }) {
 function TransactionCard({ item, account }: Props) {
   const { theme } = useTheme();
 
-  const { transactionType, category, amount, sender, body, timestamp } = item;
-  const effectiveType = category === "financial" ? transactionType : category;
-  const isNonFinancial = category === "otp" || category === "promotional";
+  const { transactionType, amount, sender, body, timestamp } = item;
+  const effectiveType = transactionType;
+  const isNonFinancial = transactionType === "OTP" || transactionType === "STATEMENT" || transactionType === "UNKNOWN";
 
   const badge = getBadge(effectiveType);
   const { color: amountColor, prefix } = getAmountStyle(transactionType);
@@ -104,7 +104,7 @@ function TransactionCard({ item, account }: Props) {
   const title = account?.name ?? sender;
   // Subtitle: bank name or sender raw
   const subtitle = account
-    ? [account.bankName, account.last4 ? `••${account.last4}` : null].filter(Boolean).join(" ")
+    ? [account.bankName, account.last4digits ? `••${account.last4digits}` : null].filter(Boolean).join(" ")
     : sender;
 
   return (
@@ -124,11 +124,7 @@ function TransactionCard({ item, account }: Props) {
       {/* Left: bank/sender logo */}
       <View style={styles.logoWrap}>
         {account ? (
-          <BankIcon
-            bankName={account.bankName}
-            slugs={account.slugs}
-            size={44}
-          />
+          <BrandIcon iconKey={account.iconKey} size={44} />
         ) : (
           <SenderIcon sender={sender} size={44} />
         )}

@@ -4,8 +4,8 @@ import { StyleSheet, Text, View } from "react-native";
 import { useTheme } from "@mobile/lib/theme";
 import { Fonts } from "@mobile/lib/fonts";
 import AppText from "@mobile/components/ui/text";
-import { getInitialAndColor } from "@mobile/lib/get-icon";
-import type { Transaction } from "@mobile/lib/transactions";
+import { getInitialAndColor } from "@mobile/lib/icon-registry";
+import type { Transaction } from "@mobile/db/transcations";
 import { getRangeBounds, type TimeRange } from "./types";
 
 type Props = {
@@ -36,16 +36,15 @@ function MerchantSpendList({ transactions, range }: Props) {
 
     for (const t of transactions) {
       if (
-        t.category !== "financial" ||
-        t.transactionType !== "debit" ||
-        t.merchant === null ||
+        t.transactionType !== "DEBIT" ||
+        t.merchantName === null ||
         t.amount === null ||
         t.timestamp < start ||
         t.timestamp > end
       ) {
         continue;
       }
-      const key = t.merchant.trim();
+      const key = t.merchantName.trim();
       if (!totals[key]) {
         totals[key] = { amount: 0, txnCount: 0 };
       }

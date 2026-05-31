@@ -77,6 +77,7 @@ export async function initTransactionsTable(): Promise<void> {
       updatedAt       INTEGER NOT NULL
     );
   `);
+
 }
 
 export async function addTransaction(data: CreateTransactionInput): Promise<number> {

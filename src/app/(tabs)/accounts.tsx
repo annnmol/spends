@@ -11,14 +11,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import BankIcon from "@mobile/components/ui/bank-icon";
+import BrandIcon from "@mobile/components/ui/brand-icon";
 import AppButton from "@mobile/components/ui/button";
 import AppText from "@mobile/components/ui/text";
 import type {
   Account,
   AccountType,
   CreateAccountInput,
-} from "@mobile/lib/accounts";
+} from "@mobile/db/accounts";
 import type { DetectedAccount } from "@mobile/lib/detectAccountsFromSms";
 import { useAccountsStore } from "@mobile/store/slices/accounts";
 
@@ -58,7 +58,7 @@ function parseForm(f: typeof EMPTY_FORM): CreateAccountInput {
     name: f.name.trim(),
     type: f.type,
     bankName: f.bankName.trim() || null,
-    last4: f.last4.trim() || null,
+    last4digits: f.last4.trim() || null,
     slugs: f.slugs
       .split(",")
       .map((s) => s.trim().toUpperCase())
@@ -93,7 +93,7 @@ export default function AccountsScreen() {
       name: account.name,
       type: account.type,
       bankName: account.bankName ?? "",
-      last4: account.last4 ?? "",
+      last4: account.last4digits ?? "",
       slugs: account.slugs.join(", "),
       billingDate: account.billingDate?.toString() ?? "",
       dueDate: account.dueDate?.toString() ?? "",
@@ -318,11 +318,7 @@ export default function AccountsScreen() {
                   onPress={() => toggleSelect(index)}
                 >
                   <View style={styles.scanItemRow}>
-                    <BankIcon
-                      bankName={item.bankName}
-                      slugs={item.slugs}
-                      size={36}
-                    />
+                    <BrandIcon iconKey={item.iconKey} size={36} />
                     <View style={styles.scanItemInfo}>
                       <AppText variant="default">{item.name}</AppText>
                       <AppText variant="caption" style={styles.dim}>
@@ -406,17 +402,13 @@ export default function AccountsScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <BankIcon
-              bankName={item.bankName}
-              slugs={item.slugs}
-              size={44}
-            />
+            <BrandIcon iconKey={item.iconKey} size={44} />
             <View style={styles.cardMain}>
               <AppText variant="default">{item.name}</AppText>
               <AppText variant="caption" style={styles.dim}>
                 {TYPE_LABELS[item.type]}
                 {item.bankName ? ` · ${item.bankName}` : ""}
-                {item.last4 ? ` · xxxx${item.last4}` : ""}
+                {item.last4digits ? ` · xxxx${item.last4digits}` : ""}
               </AppText>
               {item.slugs.length > 0 && (
                 <AppText variant="caption" style={styles.dim}>

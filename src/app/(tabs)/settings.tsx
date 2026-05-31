@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   Alert,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -18,6 +19,12 @@ import useSystemStore from "@mobile/store/slices/system";
 import { useSmsStore } from "@mobile/store/slices/sms";
 import { useAccountsStore } from "@mobile/store/slices/accounts";
 import { useMerchantsStore } from "@mobile/store/slices/merchants";
+import { exportData, importData } from "@mobile/lib/dataExport";
+import { getAllTransactions } from "@mobile/db/transcations";
+import { getAllAccounts } from "@mobile/db/accounts";
+import { getAllMerchants } from "@mobile/db/merchants";
+import { resetDatabase } from "@mobile/db/db";
+import { useTransactionsStore } from "@mobile/store/slices/transactions";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -170,6 +177,8 @@ export default function SettingsScreen() {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [hideCards, setHideCards] = useState(false);
   const [paymentReminders, setPaymentReminders] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
 
   const canRead = permission === "granted";
   const smsStore = useSmsStore.getState;
@@ -187,22 +196,79 @@ export default function SettingsScreen() {
 
   const handleClearAllData = useCallback(() => {
     Alert.alert(
-      "Clear All Data",
-      "This will permanently delete all transactions, accounts and merchants. This action cannot be undone.",
+      "Reset Database",
+      "This will permanently delete the entire database and recreate it. All transactions, accounts and merchants will be lost. This action cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Clear Everything",
+          text: "Delete Database",
           style: "destructive",
           onPress: async () => {
-            await smsStore().clearTransactions();
-            await accountsStore().clearAccounts();
-            await merchantsStore().clearMerchants();
+            await resetDatabase();
+            await useTransactionsStore.getState().init();
+            await accountsStore().init();
+            await merchantsStore().init();
           },
         },
       ],
     );
-  }, [smsStore, accountsStore, merchantsStore]);
+  }, [accountsStore, merchantsStore]);
+
+  const handleExport = useCallback(async () => {
+    setExportLoading(true);
+    try {
+      await exportData();
+    } catch (e) {
+      Alert.alert("Export Failed", e instanceof Error ? e.message : "Could not export data.");
+    } finally {
+      setExportLoading(false);
+    }
+  }, []);
+
+  const handleImport = useCallback(async () => {
+    Alert.alert(
+      "Import Data",
+      "This will replace all current data with the backup. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Import",
+          style: "destructive",
+          onPress: async () => {
+            setImportLoading(true);
+            try {
+              const counts = await importData();
+              if (!counts) return;
+              const [msgs, accts, mchts] = await Promise.all([
+                getAllTransactions(),
+                getAllAccounts(),
+                getAllMerchants(),
+              ]);
+              useSmsStore.setState({ messages: msgs });
+              useAccountsStore.setState({ accounts: accts });
+              useMerchantsStore.setState({ merchants: mchts });
+              Alert.alert(
+                "Import Complete",
+                `Restored ${counts.transactions} transactions, ${counts.accounts} accounts, ${counts.merchants} merchants.`,
+              );
+            } catch (e) {
+              Alert.alert("Import Failed", e instanceof Error ? e.message : "Could not read backup file.");
+            } finally {
+              setImportLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  }, []);
+
+  const handleRequestPermission = useCallback(async () => {
+    if (permission === "denied") {
+      Linking.openSettings();
+    } else {
+      await smsStore().grantPermission();
+    }
+  }, [permission, smsStore]);
 
   const handleReadSms = useCallback(() => {
     smsStore().readRecent();
@@ -341,6 +407,28 @@ export default function SettingsScreen() {
         <SectionLabel label="Data & Storage" iconName="database" iconLib="feather" iconColor={theme.accent} />
         <SectionCard theme={theme} isDark={isDark}>
           <SettingRow
+            iconName="shield"
+            iconLib="feather"
+            iconColor={permission === "granted" ? "#10B981" : permission === "denied" ? "#EF4444" : "#F59E0B"}
+            title="SMS Permission"
+            subtitle={
+              permission === "granted"
+                ? "Granted — SMS access active"
+                : permission === "denied"
+                  ? "Denied — tap to open app settings"
+                  : "Not set — tap to allow access"
+            }
+            onPress={permission !== "granted" ? handleRequestPermission : undefined}
+            borderColor={theme.border}
+            right={
+              permission === "granted" ? (
+                <AppText variant="small" style={{ color: "#10B981", fontWeight: "600" }}>Granted</AppText>
+              ) : (
+                <Feather name="chevron-right" size={18} color={permission === "denied" ? theme.danger : "#F59E0B"} />
+              )
+            }
+          />
+          <SettingRow
             iconName="message-square"
             iconLib="feather"
             iconColor="#0D9488"
@@ -377,11 +465,45 @@ export default function SettingsScreen() {
             }
           />
           <SettingRow
+            iconName="upload"
+            iconLib="feather"
+            iconColor="#10B981"
+            title="Export Data"
+            subtitle={exportLoading ? "Preparing export…" : "Save a JSON backup of all your data"}
+            onPress={!exportLoading ? handleExport : undefined}
+            disabled={exportLoading}
+            borderColor={theme.border}
+            right={
+              exportLoading ? (
+                <Feather name="loader" size={18} color={theme.textMuted} />
+              ) : (
+                <Feather name="chevron-right" size={18} color={theme.textMuted} />
+              )
+            }
+          />
+          <SettingRow
+            iconName="archive"
+            iconLib="feather"
+            iconColor="#8B5CF6"
+            title="Import Data"
+            subtitle={importLoading ? "Restoring…" : "Restore from a JSON backup file"}
+            onPress={!importLoading ? handleImport : undefined}
+            disabled={importLoading}
+            borderColor={theme.border}
+            right={
+              importLoading ? (
+                <Feather name="loader" size={18} color={theme.textMuted} />
+              ) : (
+                <Feather name="chevron-right" size={18} color={theme.textMuted} />
+              )
+            }
+          />
+          <SettingRow
             iconName="trash-2"
             iconLib="feather"
             iconColor="#EF4444"
             title="Clear All Data"
-            subtitle="Permanently delete all transactions and accounts"
+            subtitle="Permanently delete all transactions, accounts and merchants"
             onPress={handleClearAllData}
             isLast
             borderColor={theme.border}
@@ -444,6 +566,57 @@ export default function SettingsScreen() {
 
         {devExpanded && (
           <SectionCard theme={theme} isDark={isDark}>
+            <SettingRow
+              iconName="message-circle"
+              iconLib="feather"
+              iconColor="#0D9488"
+              title="Read Recent 50 SMS"
+              subtitle={loading ? "Reading…" : "Fetch last 50 messages from inbox"}
+              onPress={canRead && !loading ? () => smsStore().readRecent() : undefined}
+              disabled={!canRead || loading}
+              borderColor={theme.border}
+              right={
+                loading ? (
+                  <Feather name="loader" size={18} color={theme.textMuted} />
+                ) : (
+                  <Feather name="chevron-right" size={18} color={canRead ? theme.textMuted : theme.border} />
+                )
+              }
+            />
+            <SettingRow
+              iconName="inbox"
+              iconLib="feather"
+              iconColor="#6366F1"
+              title="Read All SMS"
+              subtitle={loading ? "Reading…" : "Fetch entire SMS inbox"}
+              onPress={canRead && !loading ? () => smsStore().readAll() : undefined}
+              disabled={!canRead || loading}
+              borderColor={theme.border}
+              right={
+                loading ? (
+                  <Feather name="loader" size={18} color={theme.textMuted} />
+                ) : (
+                  <Feather name="chevron-right" size={18} color={canRead ? theme.textMuted : theme.border} />
+                )
+              }
+            />
+            <SettingRow
+              iconName="calendar"
+              iconLib="feather"
+              iconColor="#3B82F6"
+              title="Read SMS Since 01-12-2025"
+              subtitle={loading ? "Reading…" : "Fetch messages after Dec 1, 2025"}
+              onPress={canRead && !loading ? () => smsStore().readSince() : undefined}
+              disabled={!canRead || loading}
+              borderColor={theme.border}
+              right={
+                loading ? (
+                  <Feather name="loader" size={18} color={theme.textMuted} />
+                ) : (
+                  <Feather name="chevron-right" size={18} color={canRead ? theme.textMuted : theme.border} />
+                )
+              }
+            />
             <SettingRow
               iconName="zap"
               iconLib="feather"

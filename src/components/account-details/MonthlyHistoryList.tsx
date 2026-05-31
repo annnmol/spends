@@ -4,8 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "@mobile/lib/theme";
 import AppText from "@mobile/components/ui/text";
-import type { Transaction } from "@mobile/lib/transactions";
-import type { Account } from "@mobile/lib/accounts";
+import type { Transaction } from "@mobile/db/transcations";
+import type { Account } from "@mobile/db/accounts";
 import { getRangeBounds, type TimeRange } from "@mobile/components/insights/types";
 import MonthlyHistoryCard from "./MonthlyHistoryCard";
 
@@ -56,8 +56,7 @@ function MonthlyHistoryList({ transactions, accountId, account, range }: Props) 
     for (const t of transactions) {
       if (
         t.accountId !== accountId ||
-        t.category !== "financial" ||
-        t.transactionType !== "debit" ||
+        t.transactionType !== "DEBIT" ||
         t.amount === null ||
         t.timestamp < start ||
         t.timestamp > end

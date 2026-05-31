@@ -4,8 +4,8 @@ import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useTheme } from "@mobile/lib/theme";
 import { Fonts } from "@mobile/lib/fonts";
 import AppText from "@mobile/components/ui/text";
-import BankIcon from "@mobile/components/ui/bank-icon";
-import type { Account } from "@mobile/lib/accounts";
+import BrandIcon from "@mobile/components/ui/brand-icon";
+import type { Account } from "@mobile/db/accounts";
 
 type Props = {
   account: Account;
@@ -29,7 +29,7 @@ function AccountSpendRow({ account, amount, percentage, txnCount, color, onPress
       onPress={onPress}
       style={[styles.row, { borderBottomColor: theme.border }]}
     >
-      <BankIcon bankName={account.bankName} slugs={account.slugs} size={36} />
+      <BrandIcon iconKey={account.iconKey} size={36} />
 
       <View style={styles.info}>
         <View style={styles.topLine}>

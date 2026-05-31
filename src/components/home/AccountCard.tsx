@@ -3,11 +3,11 @@ import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import AppText from "@mobile/components/ui/text";
-import BankIcon from "@mobile/components/ui/bank-icon";
+import BrandIcon from "@mobile/components/ui/brand-icon";
 import { useTheme } from "@mobile/lib/theme";
 import { Fonts } from "@mobile/lib/fonts";
-import type { Account } from "@mobile/lib/accounts";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Account } from "@mobile/db/accounts";
+import type { Transaction } from "@mobile/db/transcations";
 import AccountStatusBadge from "./AccountStatusBadge";
 
 type Props = {
@@ -60,7 +60,7 @@ function AccountCard({ account, transactions }: Props) {
     return transactions.filter(
       (t) =>
         t.accountId === account.id &&
-        t.category === "financial" &&
+        ["DEBIT", "CREDIT", "REFUND", "PAYMENT"].includes(t.transactionType) &&
         t.timestamp >= start &&
         t.timestamp <= end,
     );
@@ -69,7 +69,7 @@ function AccountCard({ account, transactions }: Props) {
   const monthlyDebit = useMemo(
     () =>
       accountTxns
-        .filter((t) => t.transactionType === "debit")
+        .filter((t) => t.transactionType === "DEBIT")
         .reduce((sum, t) => sum + (t.amount ?? 0), 0),
     [accountTxns],
   );
@@ -79,9 +79,9 @@ function AccountCard({ account, transactions }: Props) {
       accountTxns
         .filter(
           (t) =>
-            t.transactionType === "credit" ||
-            t.transactionType === "refund" ||
-            t.transactionType === "payment",
+            t.transactionType === "CREDIT" ||
+            t.transactionType === "REFUND" ||
+            t.transactionType === "PAYMENT",
         )
         .reduce((sum, t) => sum + (t.amount ?? 0), 0),
     [accountTxns],
@@ -103,11 +103,7 @@ function AccountCard({ account, transactions }: Props) {
       ]}
     >
       <View style={styles.header}>
-        <BankIcon
-          bankName={account.bankName}
-          slugs={account.slugs}
-          size={44}
-        />
+        <BrandIcon iconKey={account.iconKey} size={44} />
         <View style={styles.headerInfo}>
           <AppText
             variant="defaultSemiBold"
@@ -117,9 +113,9 @@ function AccountCard({ account, transactions }: Props) {
           >
             {account.name}
           </AppText>
-          {account.last4 ? (
+          {account.last4digits ? (
             <AppText variant="caption" themeKey="textMuted">
-              ••{account.last4}
+              ••{account.last4digits}
             </AppText>
           ) : (
             <AppText variant="caption" themeKey="textMuted">

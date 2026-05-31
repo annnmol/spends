@@ -4,8 +4,8 @@ import { StyleSheet, View } from "react-native";
 import AppText from "@mobile/components/ui/text";
 import { useTheme } from "@mobile/lib/theme";
 import { Fonts } from "@mobile/lib/fonts";
-import type { Account } from "@mobile/lib/accounts";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Account } from "@mobile/db/accounts";
+import type { Transaction } from "@mobile/db/transcations";
 import AccountCard from "./AccountCard";
 
 type Props = {

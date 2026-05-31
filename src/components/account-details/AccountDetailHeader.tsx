@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "@mobile/lib/theme";
 import AppText from "@mobile/components/ui/text";
-import type { Account } from "@mobile/lib/accounts";
+import type { Account } from "@mobile/db/accounts";
 
 type Props = {
   account: Account;
@@ -15,8 +15,8 @@ function AccountDetailHeader({ account, onBack }: Props) {
   const { theme } = useTheme();
 
   const subtitle =
-    account.bankName && account.last4
-      ? `${account.bankName} ··${account.last4}`
+    account.bankName && account.last4digits
+      ? `${account.bankName} ··${account.last4digits}`
       : account.bankName ?? "";
 
   return (

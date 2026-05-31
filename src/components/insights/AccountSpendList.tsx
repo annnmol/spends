@@ -4,8 +4,8 @@ import { useRouter } from "expo-router";
 
 import { useTheme } from "@mobile/lib/theme";
 import AppText from "@mobile/components/ui/text";
-import type { Account } from "@mobile/lib/accounts";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Account } from "@mobile/db/accounts";
+import type { Transaction } from "@mobile/db/transcations";
 import AccountSpendRow from "./AccountSpendRow";
 import { getRangeBounds, type TimeRange } from "./types";
 
@@ -45,8 +45,7 @@ function AccountSpendList({ accounts, transactions, range }: Props) {
 
     for (const t of transactions) {
       if (
-        t.category !== "financial" ||
-        t.transactionType !== "debit" ||
+        t.transactionType !== "DEBIT" ||
         t.amount === null ||
         t.accountId === null ||
         t.timestamp < start ||

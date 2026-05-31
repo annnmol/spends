@@ -53,8 +53,7 @@ function AccountDetailScreen() {
 
     const filtered = accountTransactions.filter(
       (t) =>
-        t.category === "financial" &&
-        t.transactionType === "debit" &&
+        t.transactionType === "DEBIT" &&
         t.amount !== null &&
         t.timestamp >= start &&
         t.timestamp <= end,

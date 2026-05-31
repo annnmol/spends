@@ -29,19 +29,22 @@ export default function HomeScreen() {
     const now = Date.now();
 
     const currentMonthTxns = transactions.filter(
-      (t) => t.category === "financial" && t.timestamp >= start && t.timestamp <= end,
+      (t) =>
+        ["DEBIT", "CREDIT", "REFUND", "PAYMENT"].includes(t.transactionType) &&
+        t.timestamp >= start &&
+        t.timestamp <= end,
     );
 
     const totalSpend = currentMonthTxns
-      .filter((t) => t.transactionType === "debit")
+      .filter((t) => t.transactionType === "DEBIT")
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
 
     const totalCredit = currentMonthTxns
       .filter(
         (t) =>
-          t.transactionType === "credit" ||
-          t.transactionType === "refund" ||
-          t.transactionType === "payment",
+          t.transactionType === "CREDIT" ||
+          t.transactionType === "REFUND" ||
+          t.transactionType === "PAYMENT",
       )
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
 

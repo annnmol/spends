@@ -1,12 +1,22 @@
 import * as SQLite from "expo-sqlite";
 
+const DB_NAME = "spends.db";
+
 let _db: SQLite.SQLiteDatabase | null = null;
 
 export async function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (_db) return _db;
-  _db = await SQLite.openDatabaseAsync("spends.db");
+  _db = await SQLite.openDatabaseAsync(DB_NAME);
   await _db.execAsync("PRAGMA journal_mode = WAL;");
   return _db;
+}
+
+export async function resetDatabase(): Promise<void> {
+  if (_db) {
+    await _db.closeAsync();
+    _db = null;
+  }
+  await SQLite.deleteDatabaseAsync(DB_NAME);
 }
 
 type Row = Record<string, SQLite.SQLiteBindValue>;

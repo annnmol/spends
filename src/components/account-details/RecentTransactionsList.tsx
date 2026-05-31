@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "@mobile/lib/theme";
 import AppText from "@mobile/components/ui/text";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Transaction } from "@mobile/db/transcations";
 import RecentTransactionItem from "./RecentTransactionItem";
 
 type Props = {
@@ -35,7 +35,7 @@ function RecentTransactionsList({ transactions, accountId }: Props) {
       .filter(
         (t) =>
           t.accountId === accountId &&
-          t.category === "financial",
+          ["DEBIT", "CREDIT", "REFUND", "PAYMENT"].includes(t.transactionType),
       )
       .slice(0, 20);
 

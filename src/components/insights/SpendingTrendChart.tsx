@@ -5,7 +5,7 @@ import { LineChart } from "react-native-gifted-charts";
 import { useTheme } from "@mobile/lib/theme";
 import { Fonts } from "@mobile/lib/fonts";
 import AppText from "@mobile/components/ui/text";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Transaction } from "@mobile/db/transcations";
 import { getRangeBounds, TIME_RANGES, type TimeRange } from "./types";
 
 type Props = {
@@ -62,8 +62,7 @@ function SpendingTrendChart({ transactions, range }: Props) {
 
     for (const t of transactions) {
       if (
-        t.category !== "financial" ||
-        t.transactionType !== "debit" ||
+        t.transactionType !== "DEBIT" ||
         t.amount === null ||
         t.timestamp < start ||
         t.timestamp > end

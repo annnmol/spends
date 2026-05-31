@@ -149,9 +149,13 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
   },
 
   addMessage: async (msg: SmsMessage) => {
-    const accounts = useAccountsStore.getState().accounts;
-    await saveTransaction(msg, accounts);
-    set({ messages: await getAllTransactions() });
+    try {
+      const accounts = useAccountsStore.getState().accounts;
+      await saveTransaction(msg, accounts);
+      set({ messages: await getAllTransactions() });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : String(e) });
+    }
   },
 
   fakeFinancial: async () => {

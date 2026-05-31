@@ -125,14 +125,14 @@ export default function ListScreen() {
   );
 
   const unlinkedCount = useMemo(
-    () => messages.filter((m) => m.category === "financial" && m.accountId === null).length,
+    () => messages.filter((m) => ["DEBIT","CREDIT","REFUND","PAYMENT"].includes(m.transactionType) && m.accountId === null).length,
     [messages],
   );
 
   const filtered = useMemo(() => {
     let list = messages;
     if (filter === "unlinked")
-      list = list.filter((m) => m.category === "financial" && m.accountId === null);
+      list = list.filter((m) => ["DEBIT","CREDIT","REFUND","PAYMENT"].includes(m.transactionType) && m.accountId === null);
     else if (typeof filter === "number")
       list = list.filter((m) => m.accountId === filter);
     if (searchQuery.trim()) {
@@ -163,7 +163,7 @@ export default function ListScreen() {
     [accounts],
   );
 
-  const keyExtractor = useCallback((item: (typeof messages)[number]) => item.id, []);
+  const keyExtractor = useCallback((item: (typeof messages)[number]) => String(item.id), []);
 
   const countLabel =
     filtered.length === messages.length

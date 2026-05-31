@@ -1,11 +1,10 @@
 import { memo } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
-import BankIcon from "@mobile/components/ui/bank-icon";
-// import MerchantIcon from "@mobile/components/ui/merchant-icon"; // v2: merchants disabled
+import BrandIcon from "@mobile/components/ui/brand-icon";
 import AppText from "@mobile/components/ui/text";
 import { useTheme } from "@mobile/lib/theme";
-import type { Transaction } from "@mobile/lib/transactions";
+import type { Transaction } from "@mobile/db/transcations";
 import type { AccountMap } from "./types";
 
 const TODAY_BORDER_COLOR = "#10B981";
@@ -100,13 +99,8 @@ function CalendarDayCell({
             const account =
               txn.accountId != null ? accountMap.get(txn.accountId) : null;
             return account ? (
-              <BankIcon
-                key={txn.id}
-                bankName={account.bankName}
-                slugs={account.slugs}
-                size={iconSize}
-              />
-            ) : null; // v2: MerchantIcon disabled
+              <BrandIcon key={txn.id} iconKey={account.iconKey} size={iconSize} />
+            ) : null;
           })}
           {/* {overflowCount > 0 && (
             <View style={[styles.badge, { backgroundColor: theme.accent }]}>
