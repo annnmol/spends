@@ -1,16 +1,17 @@
 import { create } from "zustand";
 
 import {
+  addMerchant,
   clearAllMerchants,
-  createMerchant as dbCreate,
   deleteMerchant as dbDelete,
-  updateMerchant as dbUpdate,
+  getAllMerchants,
+  initMerchantsTable,
   linkAllUnlinkedMerchants,
-  loadMerchants,
   unlinkTransactionsForMerchant,
+  updateMerchant as dbUpdate,
   type CreateMerchantInput,
   type Merchant,
-} from "@mobile/lib/merchants";
+} from "@mobile/db/merchants";
 
 export type MerchantsState = {
   merchants: Merchant[];
@@ -24,11 +25,10 @@ export type MerchantsState = {
   clearMerchants: () => Promise<void>;
 };
 
-async function refreshAndLink(): Promise<Merchant[]> {
-  const merchants = await loadMerchants();
+async function refreshAndLink(): Promise<void> {
+  const merchants = await getAllMerchants();
   useMerchantsStore.setState({ merchants });
   await linkAllUnlinkedMerchants(merchants).catch(() => {});
-  return merchants;
 }
 
 export const useMerchantsStore = create<MerchantsState>()((set) => ({
@@ -37,18 +37,20 @@ export const useMerchantsStore = create<MerchantsState>()((set) => ({
   error: null,
 
   init: async () => {
+    set({ loading: true, error: null });
     try {
-      const merchants = await loadMerchants();
-      set({ merchants });
+      await initMerchantsTable();
+      const merchants = await getAllMerchants();
+      set({ merchants, loading: false });
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : String(e) });
+      set({ error: e instanceof Error ? e.message : String(e), loading: false });
     }
   },
 
   createMerchant: async (data) => {
     set({ error: null });
     try {
-      await dbCreate(data);
+      await addMerchant(data);
       await refreshAndLink();
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
@@ -69,8 +71,9 @@ export const useMerchantsStore = create<MerchantsState>()((set) => ({
   deleteMerchant: async (id) => {
     set({ error: null });
     try {
+      await unlinkTransactionsForMerchant(id);
       await dbDelete(id);
-      const merchants = await loadMerchants();
+      const merchants = await getAllMerchants();
       set({ merchants });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });

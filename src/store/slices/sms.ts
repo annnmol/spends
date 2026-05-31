@@ -2,13 +2,13 @@ import { create } from "zustand";
 
 import {
   clearAllTransactions,
-  loadTransactions,
+  getAllTransactions,
   saveTransaction,
   saveTransactions,
   type Transaction,
-} from "@mobile/lib/transactions";
-import type { SmsMessage } from "../../../modules/sms-module";
-import SmsModule from "../../../modules/sms-module";
+} from "@mobile/db/transcations";
+import type { SmsMessage } from "@root/modules/sms-module";
+import SmsModule from "@root/modules/sms-module";
 import { useAccountsStore } from "./accounts";
 // import { useMerchantsStore } from "./merchants"; // v2: merchants disabled
 
@@ -66,7 +66,7 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
       set({ error: e instanceof Error ? e.message : String(e) });
     }
     try {
-      const saved = await loadTransactions();
+      const saved = await getAllTransactions();
       if (saved.length > 0) set({ messages: saved });
     } catch {
       // non-fatal
@@ -94,10 +94,9 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     set({ error: null, loading: true });
     try {
       const accounts = useAccountsStore.getState().accounts;
-      // const merchants = useMerchantsStore.getState().merchants; // v2
       const list = await SmsModule.getRecentSms(50);
-      await saveTransactions(list, true, accounts);
-      set({ messages: await loadTransactions() });
+      await saveTransactions(list, accounts);
+      set({ messages: await getAllTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -109,10 +108,9 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     set({ error: null, loading: true });
     try {
       const accounts = useAccountsStore.getState().accounts;
-      // const merchants = useMerchantsStore.getState().merchants; // v2
       const list = await SmsModule.getAllSms();
-      await saveTransactions(list, true, accounts);
-      set({ messages: await loadTransactions() });
+      await saveTransactions(list, accounts);
+      set({ messages: await getAllTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -124,10 +122,9 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     set({ error: null, loading: true });
     try {
       const accounts = useAccountsStore.getState().accounts;
-      // const merchants = useMerchantsStore.getState().merchants; // v2
       const list = await SmsModule.getSmsAfterDate(SINCE_TIMESTAMP);
-      await saveTransactions(list, true, accounts);
-      set({ messages: await loadTransactions() });
+      await saveTransactions(list, accounts);
+      set({ messages: await getAllTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -153,9 +150,8 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
 
   addMessage: async (msg: SmsMessage) => {
     const accounts = useAccountsStore.getState().accounts;
-    // const merchants = useMerchantsStore.getState().merchants; // v2
-    await saveTransaction(msg, null, accounts);
-    set({ messages: await loadTransactions() });
+    await saveTransaction(msg, accounts);
+    set({ messages: await getAllTransactions() });
   },
 
   fakeFinancial: async () => {
@@ -214,9 +210,8 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
       set({ pendingCount: pending.length });
       if (pending.length > 0) {
         const accounts = useAccountsStore.getState().accounts;
-        // const merchants = useMerchantsStore.getState().merchants; // v2
-        await saveTransactions(pending, false, accounts);
-        set({ messages: await loadTransactions() });
+        await saveTransactions(pending, accounts);
+        set({ messages: await getAllTransactions() });
       }
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });

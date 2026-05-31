@@ -1,4 +1,7 @@
-import { dbDelete, dbGetAll, dbGetById, dbGetByColumn, dbInsert, dbUpdate, getDb } from "@mobile/db/db";
+import { dbDelete, dbDeleteAll, dbGetAll, dbGetById, dbGetByColumn, dbInsert, dbUpdate, getDb } from "@mobile/db/db";
+import { matchAccount, type Account } from "@mobile/db/accounts";
+import { parseTransactionSms } from "@mobile/lib/parseTransactionSms";
+import type { SmsMessage } from "@root/modules/sms-module";
 
 export type TransactionType =
   | "DEBIT"
@@ -124,4 +127,55 @@ export async function getTransactionsByMerchantId(merchantId: number): Promise<T
 
 export async function getTransactionsByStatus(status: TransactionStatus): Promise<Transaction[]> {
   return dbGetByColumn<Transaction>("transactions", "status", status);
+}
+
+function smsHash(sender: string, body: string): string {
+  let h = 5381;
+  const s = sender + "|" + body;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(16);
+}
+
+export async function saveTransaction(
+  msg: SmsMessage,
+  accounts: Account[] = [],
+): Promise<void> {
+  const parsed = parseTransactionSms(msg.body, msg.sender);
+  if (parsed.sourceType === "OTP" || parsed.sourceType === "SYSTEM") return;
+
+  const smsId = msg.id?.trim() || smsHash(msg.sender, msg.body);
+  const transactionType = parsed.transactionType.toUpperCase() as TransactionType;
+  const sourceType = parsed.sourceType as SourceType;
+
+  const db = await getDb();
+  const now = Date.now();
+  const result = await db.runAsync(
+    `INSERT OR IGNORE INTO transactions
+     (smsId, sender, body, timestamp, transactionType, sourceType, confidence, status, amount, merchantName, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    smsId, msg.sender, msg.body, msg.timestamp,
+    transactionType, sourceType, parsed.confidence,
+    "ACTIVE", parsed.amount ?? null, parsed.merchant ?? null,
+    now, now,
+  );
+
+  if (result.changes === 0) return;
+
+  if (accounts.length > 0) {
+    const accountId = matchAccount(accounts, msg.body);
+    if (accountId !== null) {
+      await db.runAsync("UPDATE transactions SET accountId = ? WHERE id = ?", [accountId, result.lastInsertRowId]);
+    }
+  }
+}
+
+export async function saveTransactions(
+  msgs: SmsMessage[],
+  accounts: Account[] = [],
+): Promise<void> {
+  await Promise.all(msgs.map((msg) => saveTransaction(msg, accounts)));
+}
+
+export async function clearAllTransactions(): Promise<void> {
+  return dbDeleteAll("transactions");
 }

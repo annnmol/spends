@@ -1,8 +1,11 @@
 import {
   dbDelete,
+  dbDeleteAll,
   dbGetAll,
   dbGetById,
   dbInsert,
+  dbRawExecute,
+  dbRawQuery,
   dbUpdate,
   getDb,
   parseSlugs,
@@ -104,6 +107,37 @@ export async function getMerchantById(id: number): Promise<Merchant | null> {
 }
 
 export async function getAllMerchants(): Promise<Merchant[]> {
-  const rows = await dbGetAll<MerchantRow>("merchants","updatedAt DESC");
+  const rows = await dbGetAll<MerchantRow>("merchants", "updatedAt DESC");
   return rows.map(rowToMerchant);
+}
+
+export function matchMerchant(merchants: Merchant[], body: string): number | null {
+  if (!merchants.length) return null;
+  const upper = body.toUpperCase();
+  const match = merchants.find((m) =>
+    m.slugs.some((s) => s.length >= 3 && upper.includes(s.toUpperCase())),
+  );
+  return match?.id ?? null;
+}
+
+export async function unlinkTransactionsForMerchant(merchantId: number): Promise<void> {
+  await dbRawExecute("UPDATE transactions SET merchantId = NULL WHERE merchantId = ?", [merchantId]);
+}
+
+export async function linkAllUnlinkedMerchants(merchants: Merchant[]): Promise<void> {
+  if (!merchants.length) return;
+  const rows = await dbRawQuery<{ id: number; body: string }>(
+    "SELECT id, body FROM transactions WHERE merchantId IS NULL AND accountId IS NOT NULL",
+  );
+  for (const row of rows) {
+    const merchantId = matchMerchant(merchants, row.body);
+    if (merchantId !== null) {
+      await dbRawExecute("UPDATE transactions SET merchantId = ? WHERE id = ?", [merchantId, row.id]);
+    }
+  }
+}
+
+export async function clearAllMerchants(): Promise<void> {
+  await dbRawExecute("UPDATE transactions SET merchantId = NULL");
+  await dbDeleteAll("merchants");
 }

@@ -1,19 +1,21 @@
 import { create } from "zustand";
 
 import {
+  addAccount,
   clearAllAccounts,
-  createAccount as dbCreate,
   deleteAccount as dbDelete,
-  loadAccounts,
+  getAllAccounts,
+  initAccountsTable,
+  linkAllUnlinkedTransactions,
+  unlinkTransactionsForAccount,
   updateAccount as dbUpdate,
   type Account,
   type CreateAccountInput,
-} from "@mobile/lib/accounts";
+} from "@mobile/db/accounts";
 import {
   detectAccountsFromSms,
   type DetectedAccount,
 } from "@mobile/lib/detectAccountsFromSms";
-import { linkAllUnlinkedTransactions, unlinkTransactionsForAccount } from "@mobile/lib/transactions";
 
 export type AccountsState = {
   accounts: Account[];
@@ -29,11 +31,10 @@ export type AccountsState = {
   clearAccounts: () => Promise<void>;
 };
 
-async function refreshAndLink(): Promise<Account[]> {
-  const accounts = await loadAccounts();
+async function refreshAndLink(): Promise<void> {
+  const accounts = await getAllAccounts();
   useAccountsStore.setState({ accounts });
   await linkAllUnlinkedTransactions(accounts).catch(() => {});
-  return accounts;
 }
 
 export const useAccountsStore = create<AccountsState>()((set) => ({
@@ -42,18 +43,20 @@ export const useAccountsStore = create<AccountsState>()((set) => ({
   error: null,
 
   init: async () => {
+    set({ loading: true, error: null });
     try {
-      const accounts = await loadAccounts();
-      set({ accounts });
+      await initAccountsTable();
+      const accounts = await getAllAccounts();
+      set({ accounts, loading: false });
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : String(e) });
+      set({ error: e instanceof Error ? e.message : String(e), loading: false });
     }
   },
 
   createAccount: async (data) => {
     set({ error: null });
     try {
-      await dbCreate(data);
+      await addAccount(data);
       await refreshAndLink();
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
@@ -74,8 +77,9 @@ export const useAccountsStore = create<AccountsState>()((set) => ({
   deleteAccount: async (id) => {
     set({ error: null });
     try {
+      await unlinkTransactionsForAccount(id);
       await dbDelete(id);
-      const accounts = await loadAccounts();
+      const accounts = await getAllAccounts();
       set({ accounts });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
@@ -97,7 +101,7 @@ export const useAccountsStore = create<AccountsState>()((set) => ({
   importAccounts: async (detected) => {
     set({ error: null });
     try {
-      await Promise.all(detected.map((d) => dbCreate(d)));
+      await Promise.all(detected.map((d) => addAccount(d)));
       await refreshAndLink();
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });

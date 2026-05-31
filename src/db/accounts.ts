@@ -1,4 +1,4 @@
-import { dbDelete, dbGetAll, dbGetById, dbInsert, dbUpdate, getDb, parseSlugs, serializeSlugs } from "@mobile/db/db";
+import { dbDelete, dbDeleteAll, dbGetAll, dbGetById, dbInsert, dbRawExecute, dbRawQuery, dbUpdate, getDb, parseSlugs, serializeSlugs } from "@mobile/db/db";
 import { resolveIconKeyFromSlugs } from "@mobile/lib/icon-registry";
 
 export type AccountType =
@@ -106,4 +106,37 @@ export async function getAccountById(id: number): Promise<Account | null> {
 export async function getAllAccounts(): Promise<Account[]> {
   const rows = await dbGetAll<AccountRow>("accounts", "updatedAt DESC");
   return rows.map(rowToAccount);
+}
+
+export function matchAccount(accounts: Account[], body: string): number | null {
+  if (!accounts.length) return null;
+  const upper = body.toUpperCase();
+  const last4Match = accounts.find((a) => a.last4digits && upper.includes(a.last4digits));
+  if (last4Match) return last4Match.id;
+  const slugMatch = accounts.find((a) =>
+    a.slugs.some((s) => s.length >= 4 && upper.includes(s.toUpperCase())),
+  );
+  return slugMatch?.id ?? null;
+}
+
+export async function unlinkTransactionsForAccount(accountId: number): Promise<void> {
+  await dbRawExecute("UPDATE transactions SET accountId = NULL WHERE accountId = ?", [accountId]);
+}
+
+export async function linkAllUnlinkedTransactions(accounts: Account[]): Promise<void> {
+  if (!accounts.length) return;
+  const rows = await dbRawQuery<{ id: number; body: string }>(
+    "SELECT id, body FROM transactions WHERE accountId IS NULL",
+  );
+  for (const row of rows) {
+    const accountId = matchAccount(accounts, row.body);
+    if (accountId !== null) {
+      await dbRawExecute("UPDATE transactions SET accountId = ? WHERE id = ?", [accountId, row.id]);
+    }
+  }
+}
+
+export async function clearAllAccounts(): Promise<void> {
+  await dbRawExecute("UPDATE transactions SET accountId = NULL");
+  await dbDeleteAll("accounts");
 }
