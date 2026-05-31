@@ -15,6 +15,7 @@ import { useCalendarData } from "@mobile/components/calendar/useCalendarEvents";
 import { useTheme } from "@mobile/lib/theme";
 import { useAccountsStore } from "@mobile/store/slices/accounts";
 import { useSmsStore } from "@mobile/store/slices/sms";
+import { showHaptics } from "@root/src/lib/haptics";
 
 const GRID_H_PAD = 32; // 16px left + 16px right
 const CELL_GAP = 4; // gap between 7 cells (6 gaps total)
@@ -62,20 +63,20 @@ export default function CalendarScreen() {
   const handlePrev = useCallback(() => {
     setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
     setSelectedDate(null);
-    // showHaptics();
+    showHaptics();
   }, []);
 
   const handleNext = useCallback(() => {
     setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
     setSelectedDate(null);
-    // showHaptics();
+    showHaptics();
   }, []);
 
   const handleSelectDay = useCallback((date: Date) => {
     setSelectedDate((prev) =>
       prev?.getTime() === date.getTime() ? null : date,
     );
-    // showHaptics();
+    showHaptics();
   }, []);
 
   return (
