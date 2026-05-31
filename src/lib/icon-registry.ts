@@ -1,3 +1,5 @@
+import { BRAND_MAPPINGS } from "@mobile/lib/brandMappings";
+
 export const ICON_REGISTRY: Record<string, ReturnType<typeof require>> = {
   // Banks - Private Sector
   hdfc: require("@/assets/brands/hdfc.png"),
@@ -107,6 +109,16 @@ export function getIcon(
 ): ReturnType<typeof require> | null {
   if (!iconKey) return null;
   return ICON_REGISTRY[iconKey] ?? null;
+}
+
+export function resolveIconKeyFromSlugs(slugs: string[]): string | null {
+  if (!slugs.length) return null;
+  const lower = slugs?.map((s) => s?.toLowerCase());
+  for (const [brand, brandSlugs] of Object.entries(BRAND_MAPPINGS)) {
+    if (!(brand in ICON_REGISTRY)) continue;
+    if (brandSlugs.some((bs) => lower.includes(bs.toLowerCase()))) return brand;
+  }
+  return null;
 }
 
 const AVATAR_COLORS = [
