@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 import { useTheme } from "@mobile/lib/theme";
 import { Fonts } from "@mobile/lib/fonts";
@@ -13,17 +13,22 @@ type Props = {
   percentage: number;
   txnCount: number;
   color: string;
+  onPress: () => void;
 };
 
 function formatINR(value: number): string {
   return "₹" + value.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 }
 
-function AccountSpendRow({ account, amount, percentage, txnCount, color }: Props) {
+function AccountSpendRow({ account, amount, percentage, txnCount, color, onPress }: Props) {
   const { theme } = useTheme();
 
   return (
-    <View style={[styles.row, { borderBottomColor: theme.border }]}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={onPress}
+      style={[styles.row, { borderBottomColor: theme.border }]}
+    >
       <BankIcon bankName={account.bankName} slugs={account.slugs} size={36} />
 
       <View style={styles.info}>
@@ -54,7 +59,7 @@ function AccountSpendRow({ account, amount, percentage, txnCount, color }: Props
           />
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

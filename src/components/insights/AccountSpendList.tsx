@@ -1,5 +1,6 @@
 import { memo, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
 
 import { useTheme } from "@mobile/lib/theme";
 import AppText from "@mobile/components/ui/text";
@@ -35,6 +36,7 @@ type AccountRow = {
 
 function AccountSpendList({ accounts, transactions, range }: Props) {
   const { theme } = useTheme();
+  const router = useRouter();
 
   const rows: AccountRow[] = useMemo(() => {
     const { start, end } = getRangeBounds(range);
@@ -94,6 +96,7 @@ function AccountSpendList({ accounts, transactions, range }: Props) {
             percentage={row.percentage}
             txnCount={row.txnCount}
             color={row.color}
+            onPress={() => router.push(`/account/${row.account.id}`)}
           />
         ))
       )}
