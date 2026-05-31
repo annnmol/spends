@@ -17,6 +17,7 @@ import AppText from "@mobile/components/ui/text";
 import useSystemStore from "@mobile/store/slices/system";
 import { useSmsStore } from "@mobile/store/slices/sms";
 import { useAccountsStore } from "@mobile/store/slices/accounts";
+import { useMerchantsStore } from "@mobile/store/slices/merchants";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -173,6 +174,7 @@ export default function SettingsScreen() {
   const canRead = permission === "granted";
   const smsStore = useSmsStore.getState;
   const accountsStore = useAccountsStore.getState;
+  const merchantsStore = useMerchantsStore.getState;
 
   const isDarkMode = colorScheme === "dark" || (colorScheme === "system" && isDark);
 
@@ -186,7 +188,7 @@ export default function SettingsScreen() {
   const handleClearAllData = useCallback(() => {
     Alert.alert(
       "Clear All Data",
-      "This will permanently delete all transactions and accounts. This action cannot be undone.",
+      "This will permanently delete all transactions, accounts and merchants. This action cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -195,11 +197,12 @@ export default function SettingsScreen() {
           onPress: async () => {
             await smsStore().clearTransactions();
             await accountsStore().clearAccounts();
+            await merchantsStore().clearMerchants();
           },
         },
       ],
     );
-  }, [smsStore, accountsStore]);
+  }, [smsStore, accountsStore, merchantsStore]);
 
   const handleReadSms = useCallback(() => {
     smsStore().readRecent();
