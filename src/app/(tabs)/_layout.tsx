@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { TouchableOpacity } from "react-native";
 
+import { showHaptics } from "@mobile/lib/haptics";
 import { useTheme } from "@mobile/lib/theme";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
@@ -72,6 +74,9 @@ export default function TabsLayout() {
           fontSize: 10,
           fontWeight: "500",
         },
+        tabBarButton: (props) => (
+          <TouchableOpacity {...props as any} activeOpacity={0.7} />
+        ),
       }}
     >
       {TAB_CONFIG.map(({ name, title, icon, iconOutline }) => (
@@ -87,6 +92,9 @@ export default function TabsLayout() {
                 color={color}
               />
             ),
+          }}
+          listeners={{
+            tabPress: () => showHaptics("impactAsync"),
           }}
         />
       ))}
