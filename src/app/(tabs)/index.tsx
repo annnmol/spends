@@ -1,119 +1,94 @@
-import { useMemo } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+// ─── TESTING: SwipeableCard ───────────────────────────────────────────────────
+// Original home screen is commented out below. Restore when done testing.
+
+import { useCallback } from "react";
+import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FlashList } from "@shopify/flash-list";
 
-import { useTheme } from "@mobile/lib/theme";
-import { useAccountsStore } from "@mobile/store/slices/accounts";
+import { theme, useTheme } from "@mobile/lib/theme";
 import { useSmsStore } from "@mobile/store/slices/sms";
-import HomeHeader from "@mobile/components/home/HomeHeader";
-import MonthlySummaryCard from "@mobile/components/home/MonthlySummaryCard";
-import AccountStats from "@mobile/components/home/AccountStats";
-import MonthlyOverview from "@mobile/components/home/MonthlyOverview";
-import AccountList from "@mobile/components/home/AccountList";
+import TransactionCard from "@mobile/components/ui/card";
 import AppText from "@mobile/components/ui/text";
-
-function getMonthBounds(): { start: number; end: number } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-  return { start, end };
-}
+import type { Transaction } from "@mobile/db/transcations";
 
 export default function HomeScreen() {
   const { theme } = useTheme();
-  const accounts = useAccountsStore((s) => s.accounts);
   const transactions = useSmsStore((s) => s.messages);
 
-  const { currentMonthTxns, totalSpend, totalCredit, due, overdue } = useMemo(() => {
-    const { start, end } = getMonthBounds();
-    const now = Date.now();
+  console.log(`🚀 ~ HomeScreen ~ transactions:`, transactions[2],"\n",transactions[1]);
 
-    const currentMonthTxns = transactions.filter(
-      (t) =>
-        ["DEBIT", "CREDIT", "REFUND", "PAYMENT"].includes(t.transactionType) &&
-        t.timestamp >= start &&
-        t.timestamp <= end,
-    );
 
-    const totalSpend = currentMonthTxns
-      .filter((t) => t.transactionType === "DEBIT")
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+  const handleEdit = useCallback((t: Transaction) => console.log("edit", t.id), []);
+  const handleDelete = useCallback((t: Transaction) => console.log("delete", t.id), []);
+  const handleDuplicate = useCallback((t: Transaction) => console.log("duplicate", t.id), []);
+  const handleCategory = useCallback((t: Transaction) => console.log("category", t.id), []);
+  const handleMore = useCallback((t: Transaction) => console.log("more", t.id), []);
 
-    const totalCredit = currentMonthTxns
-      .filter(
-        (t) =>
-          t.transactionType === "CREDIT" ||
-          t.transactionType === "REFUND" ||
-          t.transactionType === "PAYMENT",
-      )
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
-
-    const due = accounts.filter(
-      (a) => a.dueDate !== null && a.dueDate > now,
-    ).length;
-
-    const overdue = accounts.filter(
-      (a) => a.dueDate !== null && a.dueDate < now,
-    ).length;
-
-    return { currentMonthTxns, totalSpend, totalCredit, due, overdue };
-  }, [transactions, accounts]);
-
-  const hasNoData = accounts.length === 0 && transactions.length === 0;
+  const renderItem = useCallback(
+    ({ item }: { item: Transaction }) => (
+      <TransactionCard
+        transaction={item}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
+        onCategory={handleCategory}
+        onMore={handleMore}
+      />
+    ),
+    [handleEdit, handleDelete, handleDuplicate, handleCategory, handleMore],
+  );
 
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: theme.background }]}
       edges={["top", "left", "right"]}
     >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
-        <HomeHeader />
-
-        <MonthlySummaryCard
-          totalSpend={totalSpend}
-          accountCount={accounts.length}
-        />
-
-        <AccountStats
-          total={accounts.length}
-          due={due}
-          overdue={overdue}
-          paid={0}
-        />
-
-        <MonthlyOverview debit={totalSpend} credit={totalCredit} />
-
-        <AccountList accounts={accounts} transactions={transactions} />
-
-        {hasNoData && (
-          <View style={styles.emptyState}>
+      <FlashList
+        data={transactions}
+        keyExtractor={(item) => String(item.id)}
+        estimatedItemSize={70}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          <View style={styles.empty}>
             <AppText variant="caption" themeKey="textMuted" style={styles.emptyText}>
-              Import SMS from the List tab to see your accounts and transactions.
+              No transactions yet. Import from the List tab.
             </AppText>
           </View>
-        )}
-      </ScrollView>
+        }
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-  },
-  scroll: {
-    paddingBottom: 40,
-  },
-  emptyState: {
-    paddingHorizontal: 32,
-    paddingTop: 8,
-    alignItems: "center",
-  },
-  emptyText: {
-    textAlign: "center",
-    lineHeight: 20,
-  },
+  safe: { flex: 1 },
+  list: { paddingHorizontal: 0, paddingTop: 16, paddingBottom: 40 },
+  empty: { flex: 1, alignItems: "center", paddingTop: 80,backgroundColor: "yellow" },
+  emptyText: { textAlign: "center" },
 });
+
+// ─── Original HomeScreen (commented out) ─────────────────────────────────────
+
+// import { useMemo } from "react";
+// import { ScrollView, StyleSheet, View } from "react-native";
+// import { SafeAreaView } from "react-native-safe-area-context";
+// import { useTheme } from "@mobile/lib/theme";
+// import { useAccountsStore } from "@mobile/store/slices/accounts";
+// import { useSmsStore } from "@mobile/store/slices/sms";
+// import HomeHeader from "@mobile/components/home/HomeHeader";
+// import MonthlySummaryCard from "@mobile/components/home/MonthlySummaryCard";
+// import AccountStats from "@mobile/components/home/AccountStats";
+// import MonthlyOverview from "@mobile/components/home/MonthlyOverview";
+// import AccountList from "@mobile/components/home/AccountList";
+// import AppText from "@mobile/components/ui/text";
+//
+// function getMonthBounds() { ... }
+//
+// export default function HomeScreen() {
+//   const { theme } = useTheme();
+//   const accounts = useAccountsStore((s) => s.accounts);
+//   const transactions = useSmsStore((s) => s.messages);
+//   ... (full original implementation)
+// }

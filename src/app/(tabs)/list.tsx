@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import TransactionCard from "@mobile/components/sms/TransactionCard";
+import TransactionCard from "@mobile/components/ui/card";
 import AppText from "@mobile/components/ui/text";
 import { useTheme } from "@mobile/lib/theme";
 import { useAccountsStore } from "@mobile/store/slices/accounts";
@@ -153,14 +153,20 @@ export default function ListScreen() {
     });
   }, []);
 
+  const noop = useCallback(() => {}, []);
+
   const renderItem = useCallback(
-    ({ item }: { item: (typeof messages)[number] }) => {
-      const account = item.accountId
-        ? accounts.find((a) => a.id === item.accountId) ?? null
-        : null;
-      return <TransactionCard item={item} account={account} />;
-    },
-    [accounts],
+    ({ item }: { item: (typeof messages)[number] }) => (
+      <TransactionCard
+        transaction={item}
+        onEdit={noop}
+        onDelete={noop}
+        onDuplicate={noop}
+        onCategory={noop}
+        onMore={noop}
+      />
+    ),
+    [noop],
   );
 
   const keyExtractor = useCallback((item: (typeof messages)[number]) => String(item.id), []);
@@ -415,7 +421,7 @@ const styles = StyleSheet.create({
 
   // ── List ──
   listContent: {
-    paddingHorizontal: 16,
+    // paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 24,
   },

@@ -24,7 +24,7 @@ function BrandIcon({ iconKey, size = 40, style }: Props) {
       <Image
         source={source}
         style={containerStyle}
-        contentFit="contain"
+        contentFit="cover"
         cachePolicy="disk"
         recyclingKey={iconKey ?? "brand"}
         transition={{ duration: 120, effect: "cross-dissolve" }}

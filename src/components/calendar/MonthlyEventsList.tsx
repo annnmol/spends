@@ -1,10 +1,10 @@
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
 import AppText from "@mobile/components/ui/text";
 import { useTheme } from "@mobile/lib/theme";
 import type { Transaction } from "@mobile/db/transcations";
-import CalendarEventCard from "./CalendarEventCard";
+import TransactionCard from "@mobile/components/ui/card";
 import type { AccountMap } from "./types";
 
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -17,6 +17,7 @@ type Props = {
 
 function MonthlyEventsList({ monthTxns, accountMap, selectedDate }: Props) {
   const { theme } = useTheme();
+  const noop = useCallback(() => {}, []);
 
   const displayed = useMemo<Transaction[]>(() => {
     if (selectedDate) {
@@ -54,10 +55,14 @@ function MonthlyEventsList({ monthTxns, accountMap, selectedDate }: Props) {
         </View>
       ) : (
         displayed.map((t) => (
-          <CalendarEventCard
+          <TransactionCard
             key={t.id}
             transaction={t}
-            account={t.accountId != null ? (accountMap.get(t.accountId) ?? null) : null}
+            onEdit={noop}
+            onDelete={noop}
+            onDuplicate={noop}
+            onCategory={noop}
+            onMore={noop}
           />
         ))
       )}
