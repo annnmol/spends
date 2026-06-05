@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 import { addSmsReceivedListener } from "../../../modules/sms-module";
 import { useAccountsStore } from "../slices/accounts";
-// import { useMerchantsStore } from "../slices/merchants"; // v2: merchants disabled
+import { useMerchantsStore } from "../slices/merchants";
 import { useSmsStore } from "../slices/sms";
 
 /**
@@ -18,10 +18,12 @@ import { useSmsStore } from "../slices/sms";
 export function SmsListenerBridge() {
   const listening = useSmsStore((s) => s.listening);
 
-  // Boot: accounts → sms (merchants disabled in v2)
+  // Boot: accounts + merchants in parallel → then sms
   useEffect(() => {
-    useAccountsStore.getState().init()
-      .then(() => useSmsStore.getState().init());
+    Promise.all([
+      useAccountsStore.getState().init(),
+      useMerchantsStore.getState().init(),
+    ]).then(() => useSmsStore.getState().init());
   }, []);
 
   // Listener: wire up / tear down as listening state changes

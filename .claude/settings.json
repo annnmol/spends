@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "expo-app-design@expo-plugins": true,
+    "expo@claude-plugins-official": true,
+    "expo@expo-plugins": true
+  }
+}

@@ -10,7 +10,7 @@ import {
 import type { SmsMessage } from "@root/modules/sms-module";
 import SmsModule from "@root/modules/sms-module";
 import { useAccountsStore } from "./accounts";
-// import { useMerchantsStore } from "./merchants"; // v2: merchants disabled
+import { useMerchantsStore } from "./merchants";
 
 // Dec 1 2025 00:00:00 IST
 const SINCE_TIMESTAMP = 1764527400000;
@@ -67,7 +67,7 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     }
     try {
       const saved = await getAllTransactions();
-      if (saved.length > 0) set({ messages: saved });
+      set({ messages: saved });
     } catch {
       // non-fatal
     }
@@ -94,8 +94,9 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
     set({ error: null, loading: true });
     try {
       const accounts = useAccountsStore.getState().accounts;
+      const merchants = useMerchantsStore.getState().merchants;
       const list = await SmsModule.getRecentSms(50);
-      await saveTransactions(list, accounts);
+      await saveTransactions(list, accounts, merchants);
       set({ messages: await getAllTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
@@ -151,7 +152,8 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
   addMessage: async (msg: SmsMessage) => {
     try {
       const accounts = useAccountsStore.getState().accounts;
-      await saveTransaction(msg, accounts);
+      const merchants = useMerchantsStore.getState().merchants;
+      await saveTransaction(msg, accounts, merchants);
       set({ messages: await getAllTransactions() });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
@@ -214,7 +216,8 @@ export const useSmsStore = create<SmsState>()((set, get) => ({
       set({ pendingCount: pending.length });
       if (pending.length > 0) {
         const accounts = useAccountsStore.getState().accounts;
-        await saveTransactions(pending, accounts);
+        const merchants = useMerchantsStore.getState().merchants;
+        await saveTransactions(pending, accounts, merchants);
         set({ messages: await getAllTransactions() });
       }
     } catch (e) {

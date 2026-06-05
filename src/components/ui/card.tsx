@@ -17,11 +17,7 @@ import * as Clipboard from "expo-clipboard";
 import { ToastAndroid } from "react-native";
 
 import type { Account } from "@mobile/db/accounts";
-
-type Props = {
-  item: Transaction;
-  account?: Account | null;
-};
+import type { Merchant } from "@mobile/db/merchants";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -100,6 +96,8 @@ function SenderIcon({ sender, size }: { sender: string; size: number }) {
 
 export type TransactionCardProps = {
   transaction: Transaction;
+  account?: Account | null;
+  merchant?: Merchant | null;
   onEdit: (t: Transaction) => void;
   onDelete: (t: Transaction) => void;
   onDuplicate: (t: Transaction) => void;
@@ -111,6 +109,8 @@ export type TransactionCardProps = {
 
 function TransactionCard({
   transaction,
+  account,
+  merchant,
   onEdit,
   onDelete,
   onDuplicate,
@@ -130,23 +130,18 @@ function TransactionCard({
 
 
 
-  //  const { theme } = useTheme();
-  
-    const { transactionType, amount, sender, body, timestamp } = transaction;
-    const effectiveType = transactionType;
-    const isNonFinancial = transactionType === "OTP" || transactionType === "STATEMENT" || transactionType === "UNKNOWN";
-  
-    const badge = getBadge(effectiveType);
-    const { color: amountColor, prefix } = getAmountStyle(transactionType);
-  
-    // Title: account name if linked, otherwise sender (user said they'll replace later)
-  // const title = account?.name ?? sender;
-  const title = "Swiggy";
-  // Subtitle: bank name or sender raw
-  const subtitle = "HDFC Bank A/C ••1234";
-    // const subtitle = account
-    //   ? [account.bankName, account.last4digits ? `••${account.last4digits}` : null].filter(Boolean).join(" ")
-  //   : sender;
+  const { transactionType, amount, sender, body, timestamp } = transaction;
+  const effectiveType = transactionType;
+  const isNonFinancial = transactionType === "STATEMENT" || transactionType === "UNKNOWN";
+
+  const badge = getBadge(effectiveType);
+  const { color: amountColor, prefix } = getAmountStyle(transactionType);
+
+  const iconKey = merchant?.iconKey ?? account?.iconKey ?? null;
+  const title = merchant?.name ?? transaction.merchantName ?? account?.name ?? sender;
+  const subtitle = account
+    ? [account.bankName, account.last4digits ? `••${account.last4digits}` : null].filter(Boolean).join(" ")
+    : sender;
   
 
   return (
@@ -180,17 +175,13 @@ function TransactionCard({
           ]}
         >
           {/* Interior layout — next step */}
-        {/* Left: bank/sender logo */}
+        {/* Left: merchant/account/sender icon */}
       <View style={styles.logoWrap}>
-        {/* {account ? ( */}
-          <BrandIcon iconKey={"zomato"} size={44} />
-        {/* ) : ( */}
-          {/* <SenderIcon sender={sender} size={44} /> */}
-        {/* )} */}
-        {/* Type dot indicator */}
-        {/* {badge && (
-          <View style={[styles.typeDot, { backgroundColor: badge.fg }]} />
-        )} */}
+        {iconKey ? (
+          <BrandIcon iconKey={iconKey} size={44} />
+        ) : (
+          <SenderIcon sender={title} size={44} />
+        )}
       </View>
 
       {/* Center: title + subtitle */}
@@ -203,18 +194,17 @@ function TransactionCard({
         >
           {title}
         </AppText>
-            <View style={styles.metaRow}>
-          {subtitle ? (
-            <AppText variant="small" themeKey="textMuted" numberOfLines={1} style={styles.subtitle}>
-              {/* {subtitle} */} HDFC Bank
+          <View style={styles.metaRow}>
+            {subtitle ? (
+              <AppText variant="small" themeKey="textMuted" numberOfLines={1} style={styles.subtitle}>
+                {subtitle}
+              </AppText>
+            ) : null}
+            {subtitle ? <View style={[styles.metaDot, { backgroundColor: theme.textMuted }]} /> : null}
+            <AppText variant="small" themeKey="textMuted" numberOfLines={1} style={styles.dateText}>
+              {formatDate(timestamp)}
             </AppText>
-          ) : null}
-          {subtitle ? <View style={[styles.metaDot, { backgroundColor: theme.textMuted }]} /> : null}
-         
-             <AppText variant="small" themeKey="textMuted" numberOfLines={1} style={styles.dateText}>
-            {formatDate(timestamp)}
-          </AppText>
-            </View>
+          </View>
       </View>
 
       {/* Right: amount + type badge */}

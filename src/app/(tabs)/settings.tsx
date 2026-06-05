@@ -19,6 +19,7 @@ import useSystemStore from "@mobile/store/slices/system";
 import { useSmsStore } from "@mobile/store/slices/sms";
 import { useAccountsStore } from "@mobile/store/slices/accounts";
 import { useMerchantsStore } from "@mobile/store/slices/merchants";
+import useAuthStore from "@mobile/store/slices/auth";
 import { exportData, importData } from "@mobile/lib/dataExport";
 import { getAllTransactions } from "@mobile/db/transcations";
 import { getAllAccounts } from "@mobile/db/accounts";
@@ -173,6 +174,10 @@ export default function SettingsScreen() {
   const listening = useSmsStore((s) => s.listening);
   const pendingCount = useSmsStore((s) => s.pendingCount);
 
+  const authSession = useAuthStore((s) => s.authSession);
+  const signOut = useAuthStore((s) => s.signOut);
+  const resetOnboarding = useAuthStore((s) => s.resetOnboarding);
+
   const [devExpanded, setDevExpanded] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [hideCards, setHideCards] = useState(false);
@@ -194,6 +199,13 @@ export default function SettingsScreen() {
     [setColorScheme],
   );
 
+  const handleSignOut = useCallback(() => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: () => signOut() },
+    ]);
+  }, [signOut]);
+
   const handleClearAllData = useCallback(() => {
     Alert.alert(
       "Reset Database",
@@ -205,6 +217,7 @@ export default function SettingsScreen() {
           style: "destructive",
           onPress: async () => {
             await resetDatabase();
+            useSmsStore.setState({ messages: [] });
             await useTransactionsStore.getState().init();
             await accountsStore().init();
             await merchantsStore().init();
@@ -293,6 +306,32 @@ export default function SettingsScreen() {
             Settings
           </AppText>
         </View>
+
+        {/* ─────────────────────────────── ACCOUNT ─────────────────────────────── */}
+        <SectionLabel label="Account" iconName="user" iconLib="feather" iconColor={theme.accent} />
+        <SectionCard theme={theme} isDark={isDark}>
+          <SettingRow
+            iconName="user"
+            iconLib="feather"
+            iconColor="#3B82F6"
+            title={authSession?.name || "Signed in"}
+            subtitle={authSession?.email || "Tap to manage your account"}
+            isLast={false}
+            borderColor={theme.border}
+          />
+          <SettingRow
+            iconName="log-out"
+            iconLib="feather"
+            iconColor="#EF4444"
+            title="Sign Out"
+            subtitle="Sign out of your account on this device"
+            onPress={handleSignOut}
+            isLast
+            borderColor={theme.border}
+            danger
+            right={<Feather name="chevron-right" size={18} color={theme.danger} />}
+          />
+        </SectionCard>
 
         {/* ─────────────────────────────── APPEARANCE ─────────────────────────────── */}
         <SectionLabel label="Appearance" iconName="palette" iconLib="material" iconColor={theme.accent} />
@@ -674,6 +713,16 @@ export default function SettingsScreen() {
               title="Clear Queue"
               subtitle="Remove all pending background jobs"
               onPress={() => smsStore().clearQueue()}
+              borderColor={theme.border}
+              right={<Feather name="chevron-right" size={18} color={theme.textMuted} />}
+            />
+            <SettingRow
+              iconName="refresh-cw"
+              iconLib="feather"
+              iconColor="#8B5CF6"
+              title="Reset Onboarding"
+              subtitle="Replay the multi-step onboarding flow"
+              onPress={resetOnboarding}
               isLast
               borderColor={theme.border}
               right={<Feather name="chevron-right" size={18} color={theme.textMuted} />}

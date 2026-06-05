@@ -17,6 +17,7 @@ import TransactionCard from "@mobile/components/ui/card";
 import AppText from "@mobile/components/ui/text";
 import { useTheme } from "@mobile/lib/theme";
 import { useAccountsStore } from "@mobile/store/slices/accounts";
+import { useMerchantsStore } from "@mobile/store/slices/merchants";
 import { useSmsStore } from "@mobile/store/slices/sms";
 
 type Filter = "all" | "unlinked" | number;
@@ -29,7 +30,11 @@ type ChipProps = {
   onPress: () => void;
 };
 
-const FilterChip = memo(function FilterChip({ label, active, onPress }: ChipProps) {
+const FilterChip = memo(function FilterChip({
+  label,
+  active,
+  onPress,
+}: ChipProps) {
   const { theme } = useTheme();
   return (
     <TouchableOpacity
@@ -46,7 +51,10 @@ const FilterChip = memo(function FilterChip({ label, active, onPress }: ChipProp
     >
       <AppText
         variant="captionSemiBold"
-        style={[styles.chipText, { color: active ? theme.onPrimary : theme.textSecondary }]}
+        style={[
+          styles.chipText,
+          { color: active ? theme.onPrimary : theme.textSecondary },
+        ]}
       >
         {label}
       </AppText>
@@ -62,7 +70,11 @@ type EmptyProps = {
   filter: Filter;
 };
 
-const EmptyState = memo(function EmptyState({ loading, permission, filter }: EmptyProps) {
+const EmptyState = memo(function EmptyState({
+  loading,
+  permission,
+  filter,
+}: EmptyProps) {
   const { theme } = useTheme();
 
   if (loading) {
@@ -77,18 +89,31 @@ const EmptyState = memo(function EmptyState({ loading, permission, filter }: Emp
     permission !== "granted"
       ? "Grant SMS permission on the Home tab to get started"
       : filter !== "all"
-      ? "No transactions match this filter"
-      : "Use the Home tab to read your SMS transactions";
+        ? "No transactions match this filter"
+        : "Use the Home tab to read your SMS transactions";
 
   return (
     <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIconWrapper, { backgroundColor: theme.surfaceSecondary }]}>
+      <View
+        style={[
+          styles.emptyIconWrapper,
+          { backgroundColor: theme.surfaceSecondary },
+        ]}
+      >
         <Ionicons name="receipt-outline" size={32} color={theme.textMuted} />
       </View>
-      <AppText variant="captionSemiBold" themeKey="text" style={styles.emptyTitle}>
+      <AppText
+        variant="captionSemiBold"
+        themeKey="text"
+        style={styles.emptyTitle}
+      >
         No transactions yet
       </AppText>
-      <AppText variant="small" themeKey="textMuted" style={styles.emptySubtitle}>
+      <AppText
+        variant="small"
+        themeKey="textMuted"
+        style={styles.emptySubtitle}
+      >
         {subtitle}
       </AppText>
     </View>
@@ -104,7 +129,14 @@ export default function ListScreen() {
   const loading = useSmsStore((s) => s.loading);
   const permission = useSmsStore((s) => s.permission);
   const readSince = useSmsStore((s) => s.readSince);
-  const accounts = useAccountsStore((s) => s.accounts);
+  const accounts = useAccountsStore((s) => {
+    return s.accounts;
+  });
+  console.log(`🚀 ~ ListScreen ~ accounts:`, accounts);
+  const merchants = useMerchantsStore((s) => {
+    return s.merchants;
+  });
+  console.log(`🚀 ~ ListScreen ~ merchants:`, merchants);
 
   const [filter, setFilter] = useState<Filter>("all");
   const [showSearch, setShowSearch] = useState(false);
@@ -125,24 +157,39 @@ export default function ListScreen() {
   );
 
   const unlinkedCount = useMemo(
-    () => messages.filter((m) => ["DEBIT","CREDIT","REFUND","PAYMENT"].includes(m.transactionType) && m.accountId === null).length,
+    () =>
+      messages.filter(
+        (m) =>
+          ["DEBIT", "CREDIT", "REFUND", "PAYMENT"].includes(
+            m.transactionType,
+          ) && m.accountId === null,
+      ).length,
     [messages],
   );
 
   const filtered = useMemo(() => {
     let list = messages;
     if (filter === "unlinked")
-      list = list.filter((m) => ["DEBIT","CREDIT","REFUND","PAYMENT"].includes(m.transactionType) && m.accountId === null);
+      list = list.filter(
+        (m) =>
+          ["DEBIT", "CREDIT", "REFUND", "PAYMENT"].includes(
+            m.transactionType,
+          ) && m.accountId === null,
+      );
     else if (typeof filter === "number")
       list = list.filter((m) => m.accountId === filter);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
-        (m) => m.body.toLowerCase().includes(q) || m.sender.toLowerCase().includes(q),
+        (m) =>
+          m.body.toLowerCase().includes(q) ||
+          m.sender.toLowerCase().includes(q),
       );
     }
     return list;
   }, [messages, filter, searchQuery]);
+
+  console.log(`🚀 ~ ListScreen ~ filtered:`, filtered);
 
   const showChips = accountsWithMessages.length > 0 || unlinkedCount > 0;
 
@@ -156,26 +203,43 @@ export default function ListScreen() {
   const noop = useCallback(() => {}, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: (typeof messages)[number] }) => (
-      <TransactionCard
-        transaction={item}
-        onEdit={noop}
-        onDelete={noop}
-        onDuplicate={noop}
-        onCategory={noop}
-        onMore={noop}
-      />
-    ),
-    [noop],
+    ({ item }: { item: (typeof messages)[number] }) => {
+      const account =
+        item.accountId != null
+          ? (accounts.find((a) => a.id === item.accountId) ?? null)
+          : null;
+      const merchant =
+        item.merchantId != null
+          ? (merchants.find((m) => m.id === item.merchantId) ?? null)
+          : null;
+
+      console.log(`🚀 ~ ListScreen ~ merchant:`, item.merchantId);
+
+      return (
+        <TransactionCard
+          transaction={item}
+          account={account}
+          merchant={merchant}
+          onEdit={noop}
+          onDelete={noop}
+          onDuplicate={noop}
+          onCategory={noop}
+          onMore={noop}
+        />
+      );
+    },
+    [noop, accounts, merchants],
   );
 
-  const keyExtractor = useCallback((item: (typeof messages)[number]) => String(item.id), []);
+  const keyExtractor = useCallback(
+    (item: (typeof messages)[number]) => String(item.id),
+    [],
+  );
 
   const countLabel =
     filtered.length === messages.length
       ? `${messages.length} transaction${messages.length !== 1 ? "s" : ""}`
       : `${filtered.length} of ${messages.length}`;
-
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: theme.background }]}
@@ -185,7 +249,11 @@ export default function ListScreen() {
       <View style={[styles.header, { backgroundColor: theme.background }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <AppText variant="small" themeKey="textMuted" style={styles.headerLabel}>
+            <AppText
+              variant="small"
+              themeKey="textMuted"
+              style={styles.headerLabel}
+            >
               YOUR ACTIVITY
             </AppText>
             <AppText variant="title" themeKey="text" style={styles.headerTitle}>
@@ -202,7 +270,9 @@ export default function ListScreen() {
               },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={showSearch ? "Close search" : "Search transactions"}
+            accessibilityLabel={
+              showSearch ? "Close search" : "Search transactions"
+            }
           >
             <Ionicons
               name={showSearch ? "close-outline" : "search-outline"}
@@ -214,11 +284,19 @@ export default function ListScreen() {
 
         {/* Search bar */}
         {showSearch && (
-          <View style={[styles.searchBar, { backgroundColor: theme.surfaceSecondary }]}>
+          <View
+            style={[
+              styles.searchBar,
+              { backgroundColor: theme.surfaceSecondary },
+            ]}
+          >
             <Ionicons name="search-outline" size={16} color={theme.textMuted} />
             <TextInput
               ref={searchRef}
-              style={[styles.searchInput, { color: theme.text, fontFamily: "sans-serif" }]}
+              style={[
+                styles.searchInput,
+                { color: theme.text, fontFamily: "sans-serif" },
+              ]}
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search sender or message…"
@@ -233,7 +311,11 @@ export default function ListScreen() {
                 hitSlop={8}
                 accessibilityLabel="Clear search"
               >
-                <Ionicons name="close-circle" size={16} color={theme.textMuted} />
+                <Ionicons
+                  name="close-circle"
+                  size={16}
+                  color={theme.textMuted}
+                />
               </TouchableOpacity>
             )}
           </View>
@@ -241,7 +323,11 @@ export default function ListScreen() {
 
         {/* Count label */}
         {messages.length > 0 && (
-          <AppText variant="small" themeKey="textMuted" style={styles.countLabel}>
+          <AppText
+            variant="small"
+            themeKey="textMuted"
+            style={styles.countLabel}
+          >
             {countLabel}
           </AppText>
         )}
@@ -303,13 +389,14 @@ export default function ListScreen() {
             colors={[theme.accent]}
           />
         }
-        contentContainerStyle={[
-          styles.listContent,
-          { flexGrow: 1 },
-        ]}
+        contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
         ItemSeparatorComponent={null}
         ListEmptyComponent={
-          <EmptyState loading={loading} permission={permission} filter={filter} />
+          <EmptyState
+            loading={loading}
+            permission={permission}
+            filter={filter}
+          />
         }
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="on-drag"

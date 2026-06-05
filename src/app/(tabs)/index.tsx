@@ -1,7 +1,7 @@
 // ─── TESTING: SwipeableCard ───────────────────────────────────────────────────
 // Original home screen is commented out below. Restore when done testing.
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
@@ -10,7 +10,52 @@ import { theme, useTheme } from "@mobile/lib/theme";
 import { useSmsStore } from "@mobile/store/slices/sms";
 import TransactionCard from "@mobile/components/ui/card";
 import AppText from "@mobile/components/ui/text";
+import AppInput from "@mobile/components/ui/app-input";
 import type { Transaction } from "@mobile/db/transcations";
+
+// ─── TEMP: AppInput demo (remove once verified) ──────────────────────────────
+function AppInputDemo() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [secret, setSecret] = useState("");
+
+  return (
+    <View style={styles.demo}>
+      <AppText variant="caption" themeKey="textMuted" style={styles.demoLabel}>
+        AppInput demo — focus to see the glow
+      </AppText>
+      <AppInput
+        label="Name"
+        placeholder="Type your name"
+        value={name}
+        onChangeText={setName}
+        autoCapitalize="words"
+        returnKeyType="next"
+        hint={name ? `Hello, ${name}` : "Material 3 + focus glow"}
+      />
+      <AppInput
+        label="Email"
+        placeholder="you@example.com"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email"
+        accentColor="#22D3EE"
+        error={
+          email.length > 0 && !email.includes("@") ? "Enter a valid email" : undefined
+        }
+      />
+      <AppInput
+        label="Password"
+        placeholder="••••••••"
+        value={secret}
+        onChangeText={setSecret}
+        secureTextEntry
+        variant="filled"
+        accentColor="#A855F7"
+      />
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -50,6 +95,7 @@ export default function HomeScreen() {
         estimatedItemSize={70}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={<AppInputDemo />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <AppText variant="caption" themeKey="textMuted" style={styles.emptyText}>
@@ -65,6 +111,8 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: { paddingHorizontal: 0, paddingTop: 16, paddingBottom: 40 },
+  demo: { paddingHorizontal: 16, paddingBottom: 20, gap: 16 },
+  demoLabel: { marginLeft: 4 },
   empty: { flex: 1, alignItems: "center", paddingTop: 80,backgroundColor: "yellow" },
   emptyText: { textAlign: "center" },
 });
